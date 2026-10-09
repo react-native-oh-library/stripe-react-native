@@ -1,6 +1,6 @@
 import React from 'react';
 import { EventSubscription } from 'react-native';
-import NativeStripeSdk from '../specs/NativeStripeSdkModule';
+import NativeStripeSdk from '../specs/v1/NativeStripeSdkModule';
 import type {
   CustomerSheetInitParams,
   CustomerSheetPresentParams,

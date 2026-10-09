@@ -1,6 +1,6 @@
 import React from 'react';
 import { AccessibilityProps, StyleProp, ViewStyle } from 'react-native';
-import NativeAuBECSDebitForm from '../specs/NativeAuBECSDebitForm';
+import NativeAuBECSDebitForm from '../specs/v1/NativeAuBECSDebitForm';
 import type { AuBECSDebitFormComponent } from '../types';
 
 /**

@@ -6,7 +6,7 @@ import type {
   StripeError,
   AddressSheetError,
 } from '../types';
-import NativeAddressSheet from '../specs/NativeAddressSheet';
+import NativeAddressSheet from '../specs/v1/NativeAddressSheet';
 
 /**
  *  Props

@@ -20,7 +20,7 @@ import {
 import NativeCardField, {
   Commands,
   FocusChangeEvent,
-} from '../specs/NativeCardField';
+} from '../specs/v1/NativeCardField';
 import type { CardBrand, CardFieldInput } from '../types';
 
 /**

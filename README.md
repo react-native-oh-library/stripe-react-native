@@ -1,290 +1,291 @@
-# Stripe React Native SDK
+# @oh-rn/stripe-react-native for HarmonyOS
 
-[![npm version](https://img.shields.io/npm/v/@stripe/stripe-react-native.svg?style=flat-square)](https://www.npmjs.com/package/@stripe/stripe-react-native)
-[![License](https://img.shields.io/github/license/stripe/stripe-react-native)](https://github.com/stripe/stripe-react-native/blob/master/LICENSE)
+本项目基于 [@stripe/stripe-react-native](https://github.com/stripe/stripe-react-native) 开发，为 React Native 鸿蒙（OpenHarmony）适配版本。
 
-The Stripe React Native SDK allows you to build delightful payment experiences in your native Android and iOS apps using React Native. We provide powerful and customizable UI screens and elements that can be used out-of-the-box to collect your users' payment details.
+## 版本对应关系
 
-## Getting started
+| 鸿蒙适配包版本 | 原始库版本 | 支持 RN 版本 | Autolink | 编译 API 版本 |
+| ------------ | ---------- | ------------ | -------- | ------------- |
+| 见发布记录 | 0.77.0 | 0.72+ | 是 | API12+ |
 
-Get started with our [📚 integration guides](https://stripe.com/docs/payments/accept-a-payment?platform=react-native) and [example project](./CONTRIBUTING.md#running-the-example-app), or [📘 browse the SDK reference](https://stripe.dev/stripe-react-native).
+## 安装
 
-> Updating to a newer version of the SDK? See our [changelog](https://github.com/stripe/stripe-react-native/blob/master/CHANGELOG.md).
-
-## Features
-
-**Simplified Security**: We make it simple for you to collect sensitive data such as credit card numbers and remain [PCI compliant](https://stripe.com/docs/security#pci-dss-guidelines). This means the sensitive data is sent directly to Stripe instead of passing through your server. For more information, see our [Integration Security Guide](https://stripe.com/docs/security).
-
-**Apple Pay**: We provide a [seamless integration with Apple Pay](https://stripe.com/docs/apple-pay).
-
-**Payment methods**: Accepting more [payment methods](https://stripe.com/docs/payments/payment-methods/overview) helps your business expand its global reach and improve checkout conversion.
-
-**SCA-Ready**: The SDK automatically performs native [3D Secure authentication](https://stripe.com/docs/payments/3d-secure) if needed to comply with [Strong Customer Authentication](https://stripe.com/docs/strong-customer-authentication) regulation in Europe.
-
-**Native UI**: We provide native screens and elements to securely collect payment details on Android and iOS.
-
-**PaymentSheet**: [Learn how to integrate](https://stripe.com/docs/payments/accept-a-payment) PaymentSheet, our new pre-built payments UI for mobile apps.
-- PaymentSheet lets you accept cards, Apple Pay, Google Pay, and much more out of the box and also supports saving & reusing payment methods.
-- PaymentSheet currently accepts the following payment methods: Card, Apple Pay, Google Pay, SEPA Debit, Bancontact, Billie, iDEAL, EPS, P24, Afterpay/Clearpay, Klarna, Giropay, and ACH.
-- PaymentSheet provides card scanning on iOS and Android, with the Android functionality provided by [Google Payment Card Recognition](https://developers.google.com/pay/payment-card-recognition/debit-credit-card-recognition). To enable card scanning in your app, follow [our guide](https://docs.corp.stripe.com/payments/accept-a-payment?payment-ui=mobile&platform=react-native#react-native-card-scanning).
-
-#### Recommended usage
-
-If you're selling digital products or services within your app, (e.g. subscriptions, in-game currencies, game levels, access to premium content, or unlocking a full version), you must use the app store's in-app purchase APIs. See [Apple's](https://developer.apple.com/app-store/review/guidelines/#payments) and [Google's](https://support.google.com/googleplay/android-developer/answer/9858738?hl=en&ref_topic=9857752) guidelines for more information. For all other scenarios you can use this SDK to process payments via Stripe.
-
-## Installation
-
-```sh
-yarn add @stripe/stripe-react-native
-or
-npm install @stripe/stripe-react-native
+```bash
+npm install @oh-rn/stripe-react-native
 ```
 
-### Expo
-
-> [Find Expo's full documentation here](https://docs.expo.io/versions/latest/sdk/stripe/).
-
-Each Expo SDK version requires a specific `stripe-react-native` version. See the [CHANGELOG](./CHANGELOG.md) for a mapping of versions. To install the correct version for your Expo SDK version run:
-
-```sh
-expo install @stripe/stripe-react-native
-```
-
-Next, add:
-
-```json
-{
-  "expo": {
-    ...
-    "plugins": [
-      [
-        "@stripe/stripe-react-native",
-        {
-          "merchantIdentifier": string | string [],
-          "enableGooglePay": boolean
-        }
-      ]
-    ],
-  }
-}
-```
-
-to your `app.json` file, where `merchantIdentifier` is the Apple merchant ID obtained [here](https://stripe.com/docs/apple-pay?platform=react-native). Otherwise, Apple Pay will not work as expected. If you have multiple `merchantIdentifier`s, you can set them in an array.
-
-### Requirements
-
-#### Android
-
-- Android 6.0 (API level 23) and above
-  - Your `compileSdkVersion` must be `36` or higher.
-- Android gradle plugin 4.x and above
-- Kotlin 2.x and above. See [this issue](https://github.com/stripe/stripe-react-native/issues/1924#issuecomment-2867227374) for how to update the Kotlin version when using react-native 0.77 and below or Expo SDK 52.
-
-_Components_
-
-In order to use [CardForm](https://stripe.dev/stripe-react-native/api-reference/index.html#CardForm) component, you need to install and configure [Material Components theme](https://github.com/material-components/material-components-android/blob/master/docs/getting-started.md#4-change-your-app-theme-to-inherit-from-a-material-components-theme) in your app.
-
-1. Add below dependency to your `app/build.gradle` file with specified version
+## 使用
 
 ```tsx
-implementation 'com.google.android.material:material:<version>'
-```
+import {
+  StripeProvider,
+  CardField,
+  CardFieldInput,
+  useStripe,
+} from '@stripe/stripe-react-native';
 
-2. Set appropriate style in your `styles.xml` file
-
-```tsx
-<style name="Theme.MyApp" parent="Theme.MaterialComponents.DayNight">
-    <!-- ... -->
-</style>
-```
-
-#### iOS
-
-The Stripe React Native SDK supports all [Apple supported Xcode versions](https://developer.apple.com/news/upcoming-requirements/) and is compatible with apps targeting iOS 13 or above. For iOS 12 support, please use [`@stripe/stripe-react-native@0.19.0`](https://github.com/stripe/stripe-react-native/releases/tag/v0.19.0).
-
-The SDK uses TypeScript features available in Babel version `7.9.0` and above.
-Alternatively use the `plugin-transform-typescript` plugin in your project.
-
-You'll need to run `pod install` in your `ios` directory to install the native dependencies.
-
-## Usage example
-
-For a complete example, [visit our docs](https://docs.stripe.com/payments/accept-a-payment?platform=react-native).
-
-```tsx
-// App.ts
-import { StripeProvider } from '@stripe/stripe-react-native';
-
-function App() {
+export default function App() {
   return (
     <StripeProvider
-      publishableKey={publishableKey}
-      merchantIdentifier="merchant.identifier" // required for Apple Pay
-      urlScheme="your-url-scheme" // required for 3D Secure and bank redirects
+      publishableKey="pk_test_..."
+      urlScheme="stripe"
     >
       <PaymentScreen />
     </StripeProvider>
   );
 }
 
-// PaymentScreen.ts
-import { useStripe } from '@stripe/stripe-react-native';
-
-export default function PaymentScreen() {
-  const { initPaymentSheet, presentPaymentSheet } = useStripe();
-
-  const setup = async () => {
-    const { error } = await initPaymentSheet({
-      merchantDisplayName: 'Example, Inc.',
-      paymentIntentClientSecret: paymentIntent, // retrieve this from your server
-    });
-    if (error) {
-      // handle error
-    }
-  };
-
-  useEffect(() => {
-    setup();
-  }, []);
-
-  const checkout = async () => {
-    const { error } = await presentPaymentSheet();
-
-    if (error) {
-      // handle error
-    } else {
-      // success
-    }
-  };
+function PaymentScreen() {
+  const { confirmPayment } = useStripe();
+  const [card, setCard] = useState<CardFieldInput.Details | null>(null);
+  const cardStyle = { borderWidth: 1, borderRadius: 8 };
+  const fieldStyle = { width: '100%', height: 50 };
 
   return (
-    <View>
-      <Button title="Checkout" onPress={checkout} />
-    </View>
+    <CardField
+      postalCodeEnabled={true}
+      cardStyle={cardStyle}
+      style={fieldStyle}
+      onCardChange={setCard}
+    />
   );
 }
+
+// 卡数据由原生 CardField 持有，confirmPayment 直接用 client secret 确认：
+await confirmPayment(clientSecret, {
+  paymentMethodType: 'Card',
+  paymentMethodData: { billingDetails: { email: 'email@stripe.com' } },
+});
 ```
 
-## Stripe initialization
+> import 时使用原库名 `'@stripe/stripe-react-native'`，而非鸿蒙包名（由 RNOH alias 自动映射到 `@oh-rn/stripe-react-native`）。
 
-To initialize Stripe in your React Native app, use the `StripeProvider` component in the root component of your application, or use the `initStripe` method.
+**平台差异**：
+- 闭源 `stripe-android`/`stripe-ios` 无鸿蒙版本，支付通道为 publishable key 直调 Stripe REST API（`@ohos.net.http`），行为对等、错误结构一致（`StripeError{code, message, ...}`）。
+- `PaymentSheet`/`CustomerSheet` 为 ArkUI 自绘页（Stripe 设计 token 近似），非闭源原生 UI 的像素级复刻。
+- 3DS/SCA 的 redirect 型 `next_action` 经 ArkWeb 全屏认证页完成，`stripe://` 回跳由 deep link（`module.json5` scheme + `handleURLCallback`）承接。
+- 平台钱包类 API（Apple Pay / Google Pay / Push Provisioning / Link / Financial Connections / Crypto Onramp / 嵌入式原生组件）鸿蒙无对应系统服务，返回结构化 `notSupported` 错误或 `false`，不静默。
+- Connect 嵌入组件依赖的 `injectedObjectJson()` 桥在 OHOS webview 上缺失，库内已在 harmony 端用 document-start 垫片补齐（见「API 详情 → 平台差异」），宿主无需处理；Connect 全屏 Modal 的硬件返回键也已在库内经 BackHandler 拦截（仅 harmony）。
 
-`StripeProvider` can accept `urlScheme`, `publishableKey`, `stripeAccountId`, `threeDSecureParams` and `merchantIdentifier` as props. Only `publishableKey` is required.
+**权限要求**：
+- 需在 `module.json5` 声明 `ohos.permission.INTERNET`（system_grant，REST 通道必需，无需动态申请）。
+- 宿主 `EntryAbility.onCreate` 需调用 `webview.WebviewController.initializeWebEngine()`（HarmonyOS 6.x ArkWeb 引擎不自动初始化，3DS 认证页与 Connect webview 依赖它）。
 
-```tsx
-import { StripeProvider } from '@stripe/stripe-react-native';
+## Link
 
-function App() {
-  const [publishableKey, setPublishableKey] = useState('');
+| 版本 | 是否支持 Autolink |
+|------|------------------|
+| 当前版本 | 是 |
 
-  const fetchPublishableKey = async () => {
-    const key = await fetchKey(); // fetch key from your server here
-    setPublishableKey(key);
-  };
+如使用版本支持 Autolink 且工程已接入，可跳过手动配置。
 
-  useEffect(() => {
-    fetchPublishableKey();
-  }, []);
+<details>
+<summary>Manual Link 配置</summary>
 
-  return (
-    <StripeProvider
-      publishableKey={publishableKey}
-      merchantIdentifier="merchant.identifier" // required for Apple Pay
-      urlScheme="your-url-scheme" // required for 3D Secure and bank redirects
-    >
-      // Your app code here
-    </StripeProvider>
-  );
+> **说明**：本模块需要同时在 C++ 侧和 ETS 侧注册 Package。
+
+### 1. Overrides RN SDK
+
+在工程根目录 `oh-package.json5` 添加：
+
+```json
+{
+  "overrides": {
+    "@rnoh/react-native-openharmony": "./react_native_openharmony"
+  }
 }
 ```
 
-or
+### 2. 引入原生端依赖
 
-```tsx
-import { initStripe } from '@stripe/stripe-react-native';
+打开 `entry/oh-package.json5`，添加：
 
-function App() {
-  // ...
-
-  useEffect(() => {
-    initStripe({
-      publishableKey: publishableKey,
-      merchantIdentifier: 'merchant.identifier',
-      urlScheme: 'your-url-scheme',
-    });
-  }, []);
+```json
+"dependencies": {
+  "@oh-rn/stripe-react-native": "file:../../node_modules/@oh-rn/stripe-react-native/harmony/stripe_react_native.har"
 }
 ```
 
-You can find more details about the `StripeProvider` component in the [API reference](https://stripe.dev/stripe-react-native/api-reference/index.html#StripeProvider).
+执行 `ohpm install`。
 
-## Testing
+### 3. 配置 CMakeLists
 
-This library includes a built in mock file for Jest.
-In order to use it, add the following code to the Jest setup file:
+打开 `entry/src/main/cpp/CMakeLists.txt`，添加：
 
-```tsx
-import mock from '@stripe/stripe-react-native/jest/mock.js';
+```cmake
+set(OH_MODULES "${CMAKE_CURRENT_SOURCE_DIR}/../../../oh_modules")
 
-jest.mock('@stripe/stripe-react-native', () => mock);
+add_subdirectory("${OH_MODULES}/@oh-rn/stripe-react-native/src/main/cpp" ./stripe_react_native)
+
+target_link_libraries(rnoh_app PUBLIC stripe_react_native)
 ```
 
-To have a more control over the mocks, you can extend and override particular methods e.g.:
+### 4. 注册 Package（C++ 侧）
 
-```tsx
-const presentNativePayMock = jest.fn();
+打开 `entry/src/main/cpp/PackageProvider.cpp`，添加：
 
-jest.mock('@stripe/stripe-react-native', () => ({
-  ...mock,
-  presentNativePay: presentNativePayMock,
-}));
+```cpp
+#include "StripeReactNativePackage.h"
+
+std::vector<std::shared_ptr<Package>> PackageProvider::getPackages(Package::Context ctx) {
+    return {
+        std::make_shared<StripeReactNativePackage>(ctx),
+    };
+}
 ```
 
-## Contributing
+### 5. 注册 Package（ETS 侧）
 
-See the [contributor guidelines](CONTRIBUTING.md) to learn how to contribute to the repository or to learn how to run the example app.
+打开 `entry/src/main/ets/RNPackagesFactory.ets`，添加：
 
-## Troubleshooting
+```typescript
+import { StripeReactNativePackage } from '@oh-rn/stripe-react-native/ts';
 
-### Android web browser windows close on backgrounding the app
-
-This is known limitation of using `singleTask` as your `launchMode` on Android. See [here](https://github.com/stripe/stripe-react-native/blob/master/docs/android-chrome-tab-closes-on-background.md) for a workaround.
-
-### `Undefined symbols for architecture x86_64` on iOS
-
-While building your iOS project, you may see a `Undefined symbols for architecture x86_64` error. This is caused by `react-native init` template configuration that is not fully compatible with Swift 5.1.
-
-```
-Undefined symbols for architecture x86_64:
-  "(extension in Foundation):__C.NSScanner.scanUpToString(Swift.String) -> Swift.String?", referenced from:
-      static Stripe.STPPhoneNumberValidator.formattedRedactedPhoneNumber(for: Swift.String, forCountryCode: Swift.String?) -> Swift.String in libStripe.a(STPPhoneNumberValidator.o)
-  "__swift_FORCE_LOAD_$_swiftUniformTypeIdentifiers", referenced from:
-      __swift_FORCE_LOAD_$_swiftUniformTypeIdentifiers_$_Stripe in libStripe.a(PKPaymentAuthorizationViewController+Stripe_Blocks.o)
+export function createRNPackages(ctx: RNPackageContext): RNPackage[] {
+  return [
+    new StripeReactNativePackage(ctx),
+  ];
+}
 ```
 
-Follow these steps to resolve this:
+</details>
 
-- Open your project via Xcode, go to `project -> build settings`, find `library search paths` and remove all swift related entries such as:
-  `$(TOOLCHAIN_DIR)/usr/lib/swift/$(PLATFORM_NAME)` and `$(TOOLCHAIN_DIR)/usr/lib/swift-5.0/$(PLATFORM_NAME)`.
-- Create a new Swift file to the project (File > New > File > Swift), give it any name (e.g. `Fix.swift`), check the appropriate Targets and create a bridging header when prompted by Xcode.
+## 属性 / API
 
-### `TypeError: null is not an object (evaluating '_NativeStripeSdk.default.initialise')` on Android
+| API | 描述 | 参数 | 返回值 | HarmonyOS 支持 |
+|-----|------|------|--------|----------------|
+| StripeProvider / initStripe | 初始化 SDK | publishableKey, urlScheme 等 | void | ✅ 完全支持 |
+| Constants (getConstants) | SDK/系统信息常量 | — | API_VERSIONS + SYSTEM_INFO | ✅ 完全支持 |
+| initialise | 配置 publishable key | InitialiseParams | Promise&lt;void&gt; | ✅ 完全支持 |
+| createPaymentMethod | 创建支付方式 | params, options | CreatePaymentMethodResult | ✅ 完全支持（REST /v1/payment_methods） |
+| createToken | 创建令牌（Card/BankAccount/Pii） | CreateParams | CreateTokenResult | ✅ 完全支持（REST /v1/tokens） |
+| createTokenForCVCUpdate | CVC 更新令牌 | cvc: string | CreateTokenForCVCUpdateResult | ✅ 完全支持 |
+| createRadarSession | 创建 Radar 会话 | — | CreateRadarSessionResult | ✅ 完全支持 |
+| confirmPayment | 确认支付意图 | clientSecret, params, options | ConfirmPaymentResult | ✅ 完全支持（含 3DS redirect） |
+| confirmSetupIntent | 确认设置意图 | clientSecret, params, options | ConfirmSetupIntentResult | ✅ 完全支持 |
+| retrievePaymentIntent / retrieveSetupIntent | 回读意图 | clientSecret | Retrieve*Result | ✅ 完全支持 |
+| handleNextAction / handleNextActionForSetup | 处理下一步认证 | clientSecret, returnURL | HandleNextAction*Result | ⚠️ 部分支持（redirect 型经 ArkWeb 完成；native-app 型无鸿蒙生态，按取消处理） |
+| initPaymentSheet | 初始化支付页 | SetupParams | InitPaymentSheetResult | ✅ 完全支持（自绘收银台，customFlow/intentConfiguration 均支持） |
+| presentPaymentSheet | 拉起支付页 | PresentOptions | PresentPaymentSheetResult | ✅ 完全支持 |
+| confirmPaymentSheetPayment | customFlow 确认 | — | ConfirmPaymentSheetPaymentResult | ✅ 完全支持 |
+| intentCreationCallback 等双向回调 ×3 | customFlow 回传 | IntentCreationCallbackParams 等 | Promise&lt;void&gt; | ✅ 完全支持（事件往返） |
+| resetPaymentSheetCustomer | 重置客户状态 | — | Promise&lt;null&gt; | ✅ 完全支持 |
+| initCustomerSheet / presentCustomerSheet | 客户支付方式管理 | InitParams / PresentParams | CustomerSheetResult | ✅ 完全支持（自绘 + CustomerAdapter 事件往返） |
+| retrieveCustomerSheetPaymentOptionSelection | 回读当前选择 | — | CustomerSheetResult | ⚠️ 部分支持（无原生持久化，返回空选择） |
+| customerAdapter*Callback ×6 / clientSecretProvider*Callback ×2 | 双向回调回传 | 各自 payload | Promise&lt;void&gt; | ✅ 完全支持 |
+| collectBankAccount | 银行账户收集确认 | isPaymentIntent, clientSecret, params | Confirm*Result | ⚠️ 部分支持（REST 直接建 PM 并确认；无托管 UI，账号由调用方传入） |
+| verifyMicrodeposits | 微存款验证 | isPaymentIntent, clientSecret, params | Confirm*Result | ✅ 完全支持 |
+| handleURLCallback | stripe:// 回跳处理 | url: string | Promise&lt;boolean&gt; | ✅ 完全支持 |
+| openAuthenticatedWebView / presentExternalWebPage / authWebViewDeepLinkHandled | Web 认证/外部页 | id/url 等 | 各自结果 | ✅ 完全支持（ArkWeb 承载） |
+| storeStripeConnectDeepLink / pollAndClearPendingStripeConnectUrls | Connect 深链存取 | url / — | void / string[] | ✅ 完全支持 |
+| downloadAndShareFile | 下载并分享文件 | url, filename | {success, error?} | ✅ 完全支持（分享面板不可用时降级为仅下载） |
+| isPlatformPaySupported | 平台钱包可用性 | params | Promise&lt;boolean&gt; | ❌ 不支持（恒 false，鸿蒙无 Stripe 平台钱包） |
+| createPlatformPayPaymentMethod / confirmPlatformPay | 平台钱包支付 | params, clientSecret | 结构化 notSupported | ❌ 不支持 |
+| openApplePaySetup / canAddCardToWallet / isCardInWallet / updatePlatformPaySheet / dismissPlatformPay / configureOrderTracking | 钱包管理 | 各自参数 | false / 结构化 notSupported | ❌ 不支持 |
+| collectFinancialConnectionsAccounts / collectBankAccountToken / setFinancialConnectionsForceNativeFlow | Financial Connections | clientSecret, params | 结构化 notSupported | ❌ 不支持（闭源托管 OAuth 流无鸿蒙承载） |
+| initLinkController / presentLinkController / confirmLinkControllerSetupIntent | Link（Private Preview） | params | 结构化 notSupported | ❌ 不支持 |
+| createEmbeddedPaymentElement / confirm / update / clear | 嵌入式支付组件 | intentConfig 等 | 结构化 notSupported | ❌ 不支持（发 loadingFailed 事件可感知降级） |
+| OnrampSdk 全部方法 | Crypto Onramp | 各自参数 | 结构化 notSupported（isSamsungPaySupported→false） | ❌ 不支持 |
+| CardField（组件） | 卡号安全输入 | autofocus/cardStyle/placeholders/postalCodeEnabled/disabled/dangerouslyGetFullCardDetails | — | ✅ 完全支持（focus/blur/clear 命令 + onCardChange/onFocusChange） |
+| CardForm（组件） | 完整卡表单 | cardStyle/placeholders 等 | — | ✅ 完全支持（focus/blur 命令 + onFormComplete） |
+| AuBECSDebitForm（组件） | 澳洲借记表单 | companyName/formStyle | — | ✅ 完全支持（onComplete） |
+| AddressSheet（组件） | 地址表单 | visible/defaultValues/sheetTitle 等 | — | ✅ 完全支持（onSubmit/onError） |
+| StripeContainer（组件） | 组件容器 | keyboardShouldPersistTaps | — | ✅ 完全支持 |
+| NavigationBar（组件） | Connect 导航栏 | title 等 | — | ⚠️ 部分支持（基础标题/关闭形态） |
+| PlatformPayButton（组件） | 平台钱包按钮 | type/appearance/onPress | — | ⚠️ 部分支持（渲染降级占位按钮，点击触发原生 notSupported） |
+| ApplePayButton / GooglePayButton / AddToWalletButton（组件） | 钱包按钮 | 各自 props | — | ❌ 不支持（占位视图 + 结构化错误事件） |
+| EmbeddedPaymentElementView / PaymentMethodMessagingElementView（组件） | 嵌入式原生视图 | configuration | — | ❌ 不支持（空视图占位） |
+| Connect JS 组件（ConnectComponentsProvider / ConnectAccountOnboarding / ConnectPayments 等） | Stripe Connect 嵌入 | connectInstance | — | ⚠️ 部分支持（经 @react-native-ohos/react-native-webview 承载；harmony 端已内置 `injectedObjectJson` 垫片与 BackHandler 返回键拦截，Android 行为不变） |
 
-You might see error this whilst initializing the `StripeProvider` component with Expo. This is caused by using an older version of Expo before stripe-react-native was [officially supported](https://github.com/stripe/stripe-react-native/issues/3#issuecomment-846225534). Updating Expo Go from the stores (or locally on simulators installed with `expo install:client:[ios|android]`) should fix the problem.
+### 平台差异
+- 支付通道为 publishable key 直调 Stripe REST API v1（表单编码、Bearer 鉴权、结构化错误对齐 `StripeError`），非闭源移动 SDK 二进制。
+- `PaymentSheet`/`CustomerSheet` 为 ArkUI 自绘（Stripe 设计 token：主色 #635BFF 等），外观近似而非闭源 Compose UI 的像素级复刻；customFlow（`onConfirmHandlerCallback` → `intentCreationCallback`）与默认流均可用。
+- 3DS/SCA 仅覆盖 redirect 型 `next_action`（ArkWeb 全屏页 + `onLoadIntercept` 拦截回跳 + 回读终态）；银行 App 跳转等 native-app 型在鸿蒙无对应生态，按取消语义返回。
+- 卡号输入用 TextInput Normal + inputFilter（避免鸿蒙密码保险箱自动填充），快照存原生侧 `CardFieldRegistry`，不经业务服务器。
 
-If you're still having troubles, please [open an issue](https://github.com/stripe/stripe-react-native/issues/new/choose) or jump in our [developer chat](https://stripe.com/go/developer-chat).
+### 未实现功能
+| API | 原因 |
+|-----|------|
+| Apple Pay / Google Pay / Push Provisioning 全组 | 鸿蒙 Wallet Kit 仅车钥匙/交通卡（且限中国大陆手机），IAP Kit 为华为收银台，均非 Stripe 通道；返回结构化 notSupported 或 false |
+| Financial Connections | 闭源 SDK 深度集成的 OAuth 托管流，Stripe 未开放鸿蒙承载 |
+| Crypto Onramp（OnrampSdk） | 闭源构建变体（Android 需 StripeSdk_includeOnramp=true），无鸿蒙版本 |
+| LinkController / Checkout | 官方 Private Preview，无公开 API 面 |
+| EmbeddedPaymentElement / PaymentMethodMessagingElement 原生视图 | 闭源 Compose 嵌入组件；空视图占位 + 生命周期事件（loadingFailed 等）可感知降级 |
 
-### `Apple Pay Is Not Available in "My App Name"`
+### 使用限制
+- 需声明 `ohos.permission.INTERNET`（system_grant）。
+- 宿主 EntryAbility 需预初始化 ArkWeb 引擎（3DS 认证页与 Connect webview 依赖）。
+- 深链回跳需在 `module.json5` 声明 `stripe` scheme（browsable），JS 侧经 `Linking` 'url' 事件 + `handleURLCallback` 回到原生。
+- RNOH 的 `Modal` 不拦截硬件返回键（`RNModalHostView` 仅在消失时补发 `onRequestClose`，未处理的返回会触发 `BackHandler.exitApp()` 直接退出应用）；库内 Connect 全屏 Modal 已在 harmony 端注册 BackHandler 拦截并走 `onExit` 回调，宿主自建全屏 Modal 时需自行同样处理。
+- Connect 嵌入组件需设备真实联网加载 `connect-js.stripe.com`/`api.stripe.com`。断网或不可达时约 30s 后 webview 停在空白错误页且加载圈持续显示（`onLoaderStart` 不触发即不清圈，与上游 Android 行为一致），恢复网络后关闭组件重开即可；原生加载失败不触发 `onLoadError`（该回调仅覆盖 connect-js 运行期错误，上游同样如此）。
 
-This can occur if you attempt to process an Apple Pay payment on a physical device (even in test mode) without having created **and uploaded** your Apple Pay Certificate to the Stripe Dashboard. Learn how to do that [here](https://stripe.com/docs/apple-pay#csr).
+## 快速验证（运行 Example）
 
-### `UnsupportedModulePropertyParserError` on iOS
+### 前置条件
 
-While installing pods in your iOS project using a Stripe React Native version before 0.52, the old architecture, and a React Native version after 0.74, you may encounter the following error:
+| 依赖 | 版本要求 |
+|------|----------|
+| Node.js | >= 18 |
+| DevEco Studio | 5.0+ / 6.0+ |
+| HarmonyOS SDK | API 12+ |
 
+### 运行步骤
+
+**1. 克隆仓库**
+
+```bash
+git clone <仓库地址>
+cd <仓库目录>
 ```
-UnsupportedModulePropertyParserError: Module NativeStripeSdkModule: TypeScript interfaces extending TurboModule must only contain 'FunctionTypeAnnotation's. Property 'onConfirmHandlerCallback' refers to a 'TSTypeReference'.
+
+**2. 安装依赖并构建**
+
+```bash
+npm install --legacy-peer-deps
+npm pack           # 生成 tgz 包（会自动触发 prepare 构建 JS 产物）
 ```
 
-If possible, update to version 0.52 or above of the Stripe React Native SDK.
-If you are unable to do so, please follow our [guide to apply the fix patch](https://github.com/stripe/stripe-react-native/tree/master/patches).
+**3. 进入 example 目录，安装依赖**
+
+```bash
+cd example
+npm install --legacy-peer-deps
+```
+
+**4. 生成 JS Bundle**
+
+```bash
+npm run dev
+```
+
+产物：`harmony/entry/src/main/resources/rawfile/bundle.harmony.js`
+
+**5. 用 DevEco Studio 打开鸿蒙工程**
+
+- 打开 DevEco Studio
+- 选择 `example/harmony` 目录
+- 等待 Sync 完成
+
+**6. 编译并运行 HAP**
+
+在 DevEco Studio 中点击运行按钮，将 HAP 安装到设备/模拟器。
+
+> **注意**：Example 中已预置插件依赖和 Package 注册，无需手动配置 Link。
+
+## 约束与限制
+
+### 兼容性
+
+- RNOH: 0.72+
+- HarmonyOS SDK: API 12+
+- DevEco Studio: 5.0+
+
+## 遗留问题
+
+- 平台钱包 / Financial Connections / Onramp / Link / 嵌入式原生组件为明确降级（结构化 notSupported，见上表），非待办事项——鸿蒙无对应系统服务或闭源 SDK 无鸿蒙版本。
+- `PaymentSheet`/`CustomerSheet` 为 ArkUI 自绘近似实现，非闭源原生 UI 像素级复刻。
+- HAP 未签名（模板无 signingConfigs），装真机需在 DevEco 配置签名。
+
+## 开源协议
+
+本项目基于 [MIT License](https://github.com/stripe/stripe-react-native/blob/main/LICENSE)，详见 [LICENSE](./LICENSE) 文件。

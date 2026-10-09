@@ -1,6 +1,7 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  BackHandler,
   Modal,
   Platform,
   SafeAreaView,
@@ -17,7 +18,7 @@ import type {
 } from './connectTypes';
 import { CommonComponentProps, EmbeddedComponent } from './EmbeddedComponent';
 import { NavigationBar } from './NavigationBar';
-import NativeConnectAccountOnboardingView from '../specs/NativeConnectAccountOnboardingView';
+import NativeConnectAccountOnboardingView from '../specs/v1/NativeConnectAccountOnboardingView';
 import { useConnectComponents } from './ConnectComponentsProvider';
 
 // Export NavigationBar for external use
@@ -26,11 +27,13 @@ export type { NavigationBarProps } from './NavigationBar';
 
 type AuthChallengeRequiredEvent = {
   action: string;
-  requestId: number;
+  requestId: string;
 };
 
 type AuthChallengeResponse = {
-  requestId: number | null;
+  // `null` cancels whichever request is currently pending, for a host with no
+  // request to address (e.g. it received a malformed AuthChallengeRequiredEvent).
+  requestId: string | null;
   completion: {
     secret: string;
     metadata?: Record<string, string>;
@@ -94,7 +97,6 @@ export function ConnectAccountOnboarding({
   // The following props are intentionally omitted from the public prop types to
   // discourage use by external integrators. This is API hygiene only — it is not
   // a security boundary. Real authorization is enforced server-side.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { kycRecipientAccountId, authChallenge, onAuthChallengeRequired } =
     rest as {
       kycRecipientAccountId?: string;
@@ -141,6 +143,24 @@ export function ConnectAccountOnboarding({
     setTimeout(onExit);
   }, [onExit]);
 
+  // RNOH 的 Modal 不拦截硬件返回键：RNModalHostView 仅在 aboutToDisappear 时才补发
+  // onRequestClose，未处理的返回会直接终止 ability（应用退出）。harmony 端在 Modal
+  // 可见期间注册 BackHandler，让返回键与导航栏关闭按钮走同一条 onExitCallback 路径；
+  // Android 保持上游行为（Modal 原生处理返回）。
+  useEffect(() => {
+    if (Platform.OS !== 'harmony' || !visible) {
+      return;
+    }
+    const subscription = BackHandler.addEventListener(
+      'hardwareBackPress',
+      () => {
+        onExitCallback();
+        return true;
+      }
+    );
+    return () => subscription.remove();
+  }, [visible, onExitCallback]);
+
   const callbacks = useMemo(() => {
     return {
       onExit: onExitCallback,
@@ -173,7 +193,7 @@ export function ConnectAccountOnboarding({
       <NativeConnectAccountOnboardingView
         visible={visible}
         title={title}
-        backgroundColor={backgroundColor}
+        sheetBackgroundColor={backgroundColor}
         onExitAction={onExitCallback}
         style={containerStyle}
       >

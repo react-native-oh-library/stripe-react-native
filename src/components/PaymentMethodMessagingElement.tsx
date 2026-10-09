@@ -11,7 +11,7 @@ import {
 import { PaymentMethodMessagingElementConfiguration } from '../types/components/PaymentMethodMessagingElementComponent';
 import NativePaymentMethodMessagingElement, {
   NativeProps,
-} from '../specs/NativePaymentMethodMessagingElement';
+} from '../specs/v1/NativePaymentMethodMessagingElement';
 import { addListener } from '../events';
 
 export interface Props extends AccessibilityProps {

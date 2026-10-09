@@ -12,7 +12,7 @@ import type {
   StripeError,
   GooglePayCardToken,
 } from '../types';
-import NativeAddToWalletButton from '../specs/NativeAddToWalletButton';
+import NativeAddToWalletButton from '../specs/v1/NativeAddToWalletButton';
 
 /**
  *  Add to wallet button component props

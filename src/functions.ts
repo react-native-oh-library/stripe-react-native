@@ -1,6 +1,6 @@
-import { createError } from './helpers';
+import { createError, isHarmony } from './helpers';
 import { MissingRoutingNumber } from './types/Errors';
-import NativeStripeSdk from './specs/NativeStripeSdkModule';
+import NativeStripeSdk from './specs/v1/NativeStripeSdkModule';
 import type {
   PlatformPayError,
   ConfirmPaymentResult,
@@ -285,8 +285,11 @@ export const createTokenForCVCUpdate = async (
  * or if your app should process it normally. This is iOS-only, and will always return false on Android.
  */
 export const handleURLCallback = async (url: string): Promise<boolean> => {
+  // iOS：ASWebAuthenticationSession 回调；鸿蒙：stripe:// deep link 经 UIAbility
+  // onNewWant 转发到 JS 后由此回到原生处理（3DS/Connect 回跳）；Android：由
+  // StripeConnectDeepLinkInterceptorActivity 在 Manifest 层拦截，JS 层恒为 false。
   const stripeHandled =
-    Platform.OS === 'ios'
+    Platform.OS === 'ios' || isHarmony
       ? await NativeStripeSdk.handleURLCallback(url)
       : false;
   return stripeHandled;

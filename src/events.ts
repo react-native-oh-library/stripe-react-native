@@ -1,8 +1,8 @@
 /**
- * Compatibility helper to use new arch events if available and fallback
- * to NativeEventEmitter or DeviceEventEmitter.
+ * Compatibility helper for new architecture events using NativeEventEmitter
+ * or DeviceEventEmitter on React Native versions before 0.80.
  *
- * Can be removed once we no longer need to support the old arch and use
+ * Can be removed once we no longer need to support React Native < 0.80 and use
  * the methods on NativeStripeSdkModule directly.
  */
 
@@ -12,14 +12,17 @@ import {
   NativeEventEmitter,
   Platform,
 } from 'react-native';
-import type { EventEmitter } from 'react-native/Libraries/Types/CodegenTypes';
-import NativeStripeSdkModule from './specs/NativeStripeSdkModule';
-import NativeOnrampSdkModule from './specs/NativeOnrampSdkModule';
+import NativeStripeSdkModule from './specs/v1/NativeStripeSdkModule';
+import NativeOnrampSdkModule from './specs/v1/NativeOnrampSdkModule';
 import { PaymentMethod } from './types';
-import { UnsafeObject } from './specs/utils';
+import { UnsafeObject } from './specs/v1/utils';
 import { FinancialConnectionsEvent } from './types/FinancialConnections';
 import { Result as ConfirmationTokenResult } from './types/ConfirmationToken';
 import type { CheckoutControllerUpdate } from './checkout/CheckoutControllerEventEmitter';
+
+// RN 0.72 的 CodegenTypes 未导出 EventEmitter 类型，这里用等价的函数签名本地声明
+// （EventEmitter<Payload> 表示：接收 (event: Payload) => void 监听器的发射器签名）。
+type EventEmitter<T> = (listener: (event: T) => void) => void;
 
 const compatEventEmitter =
   Platform.OS === 'ios'

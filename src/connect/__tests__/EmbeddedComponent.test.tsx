@@ -47,7 +47,7 @@ import React from 'react';
 import { render, waitFor, act } from '@testing-library/react-native';
 import { Platform, AppState } from 'react-native';
 import 'react-native-webview';
-import NativeStripeSdk from '../../specs/NativeStripeSdkModule';
+import NativeStripeSdk from '../specs/v1/NativeStripeSdkModule';
 import {
   EmbeddedComponent,
   isAllowedStripeHost,

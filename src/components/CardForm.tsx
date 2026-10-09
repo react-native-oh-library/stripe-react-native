@@ -11,7 +11,7 @@ import {
   StyleProp,
   ViewStyle,
 } from 'react-native';
-import NativeCardForm, { Commands } from '../specs/NativeCardForm';
+import NativeCardForm, { Commands } from '../specs/v1/NativeCardForm';
 import {
   currentlyFocusedInput,
   focusInput,

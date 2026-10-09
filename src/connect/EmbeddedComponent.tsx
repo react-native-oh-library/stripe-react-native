@@ -20,7 +20,7 @@ import type {
 } from 'react-native-webview/lib/WebViewTypes';
 import type { EventSubscription } from 'react-native';
 import pjson from '../../package.json';
-import NativeStripeSdk from '../specs/NativeStripeSdkModule';
+import NativeStripeSdk from '../specs/v1/NativeStripeSdkModule';
 import { addListener } from '../events';
 import { useConnectComponents } from './ConnectComponentsProvider';
 import type {
@@ -844,6 +844,27 @@ export function EmbeddedComponent(props: EmbeddedComponentProps) {
     [backgroundColor, style]
   );
 
+  // 与 iOS/Android 原生 injectedJavaScriptObject 注入一致的数据体
+  const injectedObject = {
+    initParams: {
+      appearance: withDefaultFontFamily(appearance),
+      locale,
+      fonts,
+    },
+    initComponentProps: componentProps,
+    appInfo: { applicationId: overrides?.applicationId },
+  };
+
+  // OHOS WebView 移植版只注册了 postMessage 代理，未实现 injectedObjectJson 桥
+  // （injectedJavaScriptObject 的原生注入），connect-js 页面初始化时会抛
+  // "injectedObjectJson is not a function"，onLoaderStart 永不回传。
+  // 这里用 OHOS 端受支持的文档起始注入（injectedJavaScriptBeforeContentLoaded）
+  // 垫片补齐；其余平台保留上游 Android 的时序 workaround（空脚本）。
+  const bootstrapScript =
+    Platform.OS === 'harmony'
+      ? buildOhosInjectedObjectShim(injectedObject)
+      : '(function() {})();';
+
   if (!WebViewComponent) return null;
 
   return (
@@ -853,17 +874,8 @@ export function EmbeddedComponent(props: EmbeddedComponentProps) {
       webviewDebuggingEnabled={DEVELOPMENT_MODE}
       source={source}
       userAgent={userAgent}
-      injectedJavaScriptObject={{
-        initParams: {
-          appearance: withDefaultFontFamily(appearance),
-          locale,
-          fonts,
-        },
-        initComponentProps: componentProps,
-        appInfo: { applicationId: overrides?.applicationId },
-      }}
-      // Fixes injectedJavaScriptObject in Android https://github.com/react-native-webview/react-native-webview/issues/3326#issuecomment-3048111789
-      injectedJavaScriptBeforeContentLoaded={'(function() {})();'}
+      injectedJavaScriptObject={injectedObject}
+      injectedJavaScriptBeforeContentLoaded={bootstrapScript}
       injectedJavaScript={
         sizeToContent ? CONTENT_HEIGHT_OBSERVER_SCRIPT : undefined
       }
@@ -901,6 +913,33 @@ const CONTENT_HEIGHT_OBSERVER_SCRIPT = `
 
 const DEFAULT_FONT =
   "-apple-system, 'system-ui', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'";
+
+// 构造 OHOS 文档起始注入脚本：为 window.ReactNativeWebView 补齐 injectedObjectJson()。
+// 三层防御覆盖代理注入时序的三种可能（代理已存在直接补 / 代理稍后经 JS 赋值触发
+// setter 陷阱 / 绕过 JS 赋值由 MutationObserver 兜底重补）。幂等：若
+// injectedObjectJson 已存在（iOS/Android 原生实现，或移植版未来补齐）则不干预。
+function buildOhosInjectedObjectShim(obj: Record<string, unknown>): string {
+  const json = JSON.stringify(obj).replace(
+    /[\u2028\u2029]/g,
+    ch => (ch === '\u2028' ? '\\u2028' : '\\u2029')
+  );
+  // 契约：injectedObjectJson() 必须返回 JSON 字符串（页面自行 JSON.parse），与
+  // iOS/Android 原生实现一致。因此 JSON 文本作为字符串字面量嵌入（双重 stringify）；
+  // 若嵌对象字面量并返回对象，页面 JSON.parse(对象) 会强转 "[object Object]" 抛
+  // SyntaxError，引导脚本崩溃、onLoaderStart 永不回传。
+  return (
+    `(function(){var J=${JSON.stringify(json)};` +
+    `function add(o){if(o&&typeof o.injectedObjectJson!=='function'){try{o.injectedObjectJson=function(){return J;};}catch(e){}}}` +
+    `add(window.ReactNativeWebView);` +
+    `try{var v=window.ReactNativeWebView;` +
+    `Object.defineProperty(window,'ReactNativeWebView',{configurable:true,get:function(){return v;},set:function(n){add(n);v=n;}});}catch(e){}` +
+    `try{if(typeof MutationObserver!=='undefined'){` +
+    `var mo=new MutationObserver(function(){` +
+    `if(window.ReactNativeWebView&&typeof window.ReactNativeWebView.injectedObjectJson==='function'){mo.disconnect();}` +
+    `else{add(window.ReactNativeWebView);}});` +
+    `mo.observe(document,{childList:true,subtree:true});}}catch(e){}})();`
+  );
+}
 
 // Returns appearance with fontFamily set if not defined
 function withDefaultFontFamily(appearance: any) {

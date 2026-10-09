@@ -1,7 +1,7 @@
 import React from 'react';
 
 import { StyleProp, StyleSheet, ViewStyle, View } from 'react-native';
-import NativeStripeContainer from '../specs/NativeStripeContainer';
+import NativeStripeContainer from '../specs/v1/NativeStripeContainer';
 
 /**
  *  Stripe Container Component Props

@@ -1,21 +1,24 @@
 import { EventSubscription, Platform } from 'react-native';
-import NativeOnrampSdk from '../specs/NativeOnrampSdkModule';
+import NativeOnrampSdk from '../specs/v1/NativeOnrampSdkModule';
 import { Onramp } from '../types';
 import type { Address } from '../types';
 import { useCallback } from 'react';
 import { addOnrampListener } from '../events';
+import { isHarmony } from '../helpers';
 import { CryptoPaymentToken } from '../types/Onramp';
 
 export function requireOnrampModule() {
   if (NativeOnrampSdk == null) {
     throw new Error(
-      Platform.select({
-        ios: "Onramp module is not available. Add 'stripe-react-native/Onramp' to your Podfile.",
-        android:
-          "Onramp module is not available. Add 'StripeSdk_includeOnramp=true' to gradle.properties.",
-        default:
-          "Onramp module is not available. Enable the Onramp pod on iOS and set 'StripeSdk_includeOnramp=true' on Android.",
-      }) ?? 'Onramp module is not available.'
+      isHarmony
+        ? 'Onramp module is not available on HarmonyOS. Crypto Onramp is not supported on this platform.'
+        : Platform.select({
+            ios: "Onramp module is not available. Add 'stripe-react-native/Onramp' to your Podfile.",
+            android:
+              "Onramp module is not available. Add 'StripeSdk_includeOnramp=true' to gradle.properties.",
+            default:
+              "Onramp module is not available. Enable the Onramp pod on iOS and set 'StripeSdk_includeOnramp=true' on Android.",
+          }) ?? 'Onramp module is not available.'
     );
   }
   return NativeOnrampSdk;

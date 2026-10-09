@@ -21,6 +21,12 @@ export const shouldAttributeExpo = () => {
 export const isiOS = Platform.OS === 'ios';
 export const isAndroid = Platform.OS === 'android';
 
+/**
+ * npm react-native 的 PlatformOSType 类型未包含 'harmony'（RNOH 运行时返回该值），
+ * 用 as string 放宽比较以通过类型检查，行为与运行时一致。
+ */
+export const isHarmony = (Platform.OS as string) === 'harmony';
+
 export function createError<T>(error: StripeError<T>) {
   return {
     code: error.code,

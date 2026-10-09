@@ -41,7 +41,7 @@ export class AnalyticsClient {
         ...payload,
         client_id: CLIENT_ID,
         origin: ORIGIN,
-        sdk_platform: Platform.OS as 'ios' | 'android',
+        sdk_platform: Platform.OS as 'ios' | 'android' | 'harmony',
         sdk_version: this.systemInfo.sdkVersion,
         os_version: this.systemInfo.osVersion,
         device_type: this.systemInfo.deviceType,
@@ -69,7 +69,7 @@ export class AnalyticsClient {
    * Build user agent string for analytics requests
    */
   private buildUserAgent(): string {
-    const platform = Platform.OS; // 'ios' or 'android'
+    const platform = Platform.OS; // 'ios' | 'android' | 'harmony'
     return `Stripe/v1 ${platform}/${this.systemInfo.sdkVersion}`;
   }
 }

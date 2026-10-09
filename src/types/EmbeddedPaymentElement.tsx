@@ -15,7 +15,7 @@ import type {
 import type { PaymentMethod } from '.';
 import type * as ConfirmationToken from './ConfirmationToken';
 import * as PaymentSheetTypes from './PaymentSheet';
-import NativeStripeSdkModule from '../specs/NativeStripeSdkModule';
+import NativeStripeSdkModule from '../specs/v1/NativeStripeSdkModule';
 import {
   ReactElement,
   useCallback,
@@ -30,7 +30,7 @@ import { addListener } from '../events';
 import NativeEmbeddedPaymentElement, {
   Commands,
   NativeProps,
-} from '../specs/NativeEmbeddedPaymentElement';
+} from '../specs/v1/NativeEmbeddedPaymentElement';
 
 // -----------------------------------------------------------------------------
 // Types

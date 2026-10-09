@@ -7,16 +7,19 @@ import {
   StyleSheet,
   Platform,
   NativeSyntheticEvent,
+  View,
+  Text,
 } from 'react-native';
-import NativeStripeSdk from '../specs/NativeStripeSdkModule';
+import NativeStripeSdk from '../specs/v1/NativeStripeSdkModule';
+import { isHarmony } from '../helpers';
 import {
   ButtonType,
   ButtonStyle,
   ShippingMethod,
   ShippingContact,
 } from '../types/PlatformPay';
-import NativeApplePayButton from '../specs/NativeApplePayButton';
-import NativeGooglePayButton from '../specs/NativeGooglePayButton';
+import NativeApplePayButton from '../specs/v1/NativeApplePayButton';
+import NativeGooglePayButton from '../specs/v1/NativeGooglePayButton';
 
 /**
  *  PlatformPayButton Component Props
@@ -169,6 +172,17 @@ export function PlatformPayButton({
           {...callbackProps}
           {...props}
         />
+      ) : isHarmony ? (
+        // 鸿蒙无 Apple Pay / Google Pay 系统服务，渲染降级占位按钮。
+        // 点击仍触发 onPress，由原生 isPlatformPaySupported / createPlatformPayPaymentMethod
+        // 返回 notSupported 结构化错误（与 functions.ts 既有错误结构一致）。
+        <View
+          style={[styles.placeholderContainer, { borderRadius: borderRadius ?? 4 }]}
+        >
+          <Text style={styles.placeholderText} numberOfLines={1}>
+            Platform Pay
+          </Text>
+        </View>
       ) : (
         <NativeGooglePayButton
           type={type}
@@ -191,4 +205,16 @@ const styles = StyleSheet.create({
     flex: 0,
   },
   nativeButtonStyle: { flex: 1 },
+  placeholderContainer: {
+    flex: 1,
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#000000',
+  },
+  placeholderText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
 });
