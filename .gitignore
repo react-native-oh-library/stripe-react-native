@@ -1,0 +1,31 @@
+# OSX
+.DS_Store
+
+# node.js
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Build output
+/dist
+
+# npm pack output
+*.tgz
+
+# IDE
+.idea/
+.vscode/
+
+# HarmonyOS
+example/harmony/oh_modules/
+example/harmony/entry/build/
+example/harmony/.hvigor/
+example/harmony/.cxx/
+.cxx/
+.ohpm/
+harmony/*.har
+
+# rn.py build hap fingerprints / local build metadata
+.rn-build/
+
+package-lock.json

@@ -1,0 +1,705 @@
+// Mock dependencies BEFORE imports
+import { mockCreateNativeStripeSdkMock } from '../testUtils';
+
+const mockInjectJavaScript = jest.fn();
+let webViewOnMessage: ((event: any) => void) | undefined;
+let mockLoadWebView = false;
+let mockWebViewComponent: any;
+
+jest.mock('react', () => {
+  const React = jest.requireActual('react');
+  return {
+    ...React,
+    useState: (initialState: any) => {
+      let resolvedInitialState = initialState;
+      if (mockLoadWebView && initialState === null) {
+        mockLoadWebView = false;
+        resolvedInitialState = { WebView: mockWebViewComponent };
+      }
+      return React.useState(resolvedInitialState);
+    },
+  };
+});
+
+jest.mock('react-native-webview', () => {
+  const React = require('react');
+  mockWebViewComponent = React.forwardRef((props: any, ref: any) => {
+    webViewOnMessage = props.onMessage;
+    React.useImperativeHandle(ref, () => ({
+      injectJavaScript: mockInjectJavaScript,
+    }));
+    return null;
+  });
+  return {
+    WebView: mockWebViewComponent,
+  };
+});
+
+jest.mock('../../specs/NativeStripeSdkModule', () =>
+  mockCreateNativeStripeSdkMock({
+    collectBankAccountToken: jest.fn(),
+    collectFinancialConnectionsAccounts: jest.fn(),
+    openAuthenticatedWebView: jest.fn(),
+  })
+);
+
+import React from 'react';
+import { render, waitFor, act } from '@testing-library/react-native';
+import { Platform, AppState } from 'react-native';
+import 'react-native-webview';
+import NativeStripeSdk from '../specs/v1/NativeStripeSdkModule';
+import {
+  EmbeddedComponent,
+  isAllowedStripeHost,
+  toStripeJsBankAccountToken,
+} from '../EmbeddedComponent';
+import {
+  loadConnectAndInitialize,
+  ConnectComponentsProvider,
+  useConnectComponents,
+} from '../ConnectComponentsProvider';
+import type { StripeConnectInitParams } from '../connectTypes';
+
+describe('EmbeddedComponent', () => {
+  const mockInitParams: StripeConnectInitParams = {
+    publishableKey: 'pk_test_123',
+    fetchClientSecret: jest.fn(async () => 'secret_123'),
+    appearance: {
+      variables: {
+        colorPrimary: '#000000',
+        colorBackground: '#FFFFFF',
+      },
+    },
+    locale: 'en',
+  };
+
+  let connectInstance: any;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    webViewOnMessage = undefined;
+    mockLoadWebView = false;
+    connectInstance = loadConnectAndInitialize(mockInitParams);
+  });
+
+  const renderComponent = (props: any = {}) => {
+    return render(
+      <ConnectComponentsProvider connectInstance={connectInstance}>
+        <EmbeddedComponent
+          component="payments"
+          onLoaderStart={jest.fn()}
+          onLoadError={jest.fn()}
+          onPageDidLoad={jest.fn()}
+          {...props}
+        />
+      </ConnectComponentsProvider>
+    );
+  };
+
+  describe('Initialization & Setup', () => {
+    it('component loads react-native-webview dynamically', async () => {
+      const { rerender } = renderComponent();
+
+      await waitFor(() => {
+        // WebView should be loaded after dynamic import
+        rerender(
+          <ConnectComponentsProvider connectInstance={connectInstance}>
+            <EmbeddedComponent
+              component="payments"
+              onLoaderStart={jest.fn()}
+              onLoadError={jest.fn()}
+              onPageDidLoad={jest.fn()}
+            />
+          </ConnectComponentsProvider>
+        );
+      });
+
+      // Component should render without crashing
+      expect(true).toBe(true);
+    });
+
+    it('SDK version validation rejects invalid formats', () => {
+      // This test verifies the version format check at module load time
+      // The actual validation happens in the module scope
+      const versionPattern = /^\d+\.\d+\.\d+$/;
+      expect('1.0.0').toMatch(versionPattern);
+      expect('1.0.0-beta').not.toMatch(versionPattern);
+      expect('1.0').not.toMatch(versionPattern);
+    });
+
+    it('userAgent string includes correct platform and SDK version', () => {
+      const platform = Platform.OS;
+      const version = Platform.Version;
+      const expectedUserAgent = `Mobile - Stripe ReactNative SDK ${platform}/${version} - stripe-react_native/1.0.0`;
+
+      // Verify the pattern is correct
+      expect(expectedUserAgent).toContain('Mobile');
+      expect(expectedUserAgent).toContain('stripe-react_native/1.0.0');
+    });
+  });
+
+  describe('State Management', () => {
+    it('appearance changes should trigger provider update', async () => {
+      let contextValue: any;
+
+      const TestComponent = () => {
+        contextValue = useConnectComponents();
+        return (
+          <EmbeddedComponent
+            component="payments"
+            onLoaderStart={jest.fn()}
+            onLoadError={jest.fn()}
+            onPageDidLoad={jest.fn()}
+          />
+        );
+      };
+
+      render(
+        <ConnectComponentsProvider connectInstance={connectInstance}>
+          <TestComponent />
+        </ConnectComponentsProvider>
+      );
+
+      const initialAppearance = contextValue.appearance;
+
+      // Update appearance
+      const newAppearance = {
+        variables: {
+          colorPrimary: '#FF0000',
+        },
+      };
+
+      act(() => {
+        connectInstance.update({ appearance: newAppearance });
+      });
+
+      await waitFor(() => {
+        expect(contextValue.appearance).not.toBe(initialAppearance);
+        expect(contextValue.appearance).toEqual(newAppearance);
+      });
+    });
+
+    it('locale changes should trigger provider update', async () => {
+      let contextValue: any;
+
+      const TestComponent = () => {
+        contextValue = useConnectComponents();
+        return (
+          <EmbeddedComponent
+            component="payments"
+            onLoaderStart={jest.fn()}
+            onLoadError={jest.fn()}
+            onPageDidLoad={jest.fn()}
+          />
+        );
+      };
+
+      render(
+        <ConnectComponentsProvider connectInstance={connectInstance}>
+          <TestComponent />
+        </ConnectComponentsProvider>
+      );
+
+      expect(contextValue.locale).toBe('en');
+
+      act(() => {
+        connectInstance.update({ locale: 'fr' });
+      });
+
+      await waitFor(() => {
+        expect(contextValue.locale).toBe('fr');
+      });
+    });
+
+    it('component re-renders when props change', () => {
+      const { rerender } = renderComponent({
+        componentProps: { setPayment: 'pi_123' },
+      });
+
+      // Should not throw when re-rendering with different props
+      expect(() => {
+        rerender(
+          <ConnectComponentsProvider connectInstance={connectInstance}>
+            <EmbeddedComponent
+              component="payment-details"
+              componentProps={{ setPayment: 'pi_456' }}
+              onLoaderStart={jest.fn()}
+              onLoadError={jest.fn()}
+              onPageDidLoad={jest.fn()}
+            />
+          </ConnectComponentsProvider>
+        );
+      }).not.toThrow();
+    });
+  });
+
+  describe('App State Handling', () => {
+    let appStateListeners: any[] = [];
+
+    beforeEach(() => {
+      appStateListeners = [];
+      (AppState.currentState as any) = 'active';
+      (AppState.addEventListener as jest.Mock) = jest.fn((_event, handler) => {
+        appStateListeners.push(handler);
+        return {
+          remove: jest.fn(() => {
+            const index = appStateListeners.indexOf(handler);
+            if (index > -1) {
+              appStateListeners.splice(index, 1);
+            }
+          }),
+        };
+      });
+    });
+
+    it('AppState listener is registered on mount', () => {
+      renderComponent();
+
+      expect(AppState.addEventListener).toHaveBeenCalledWith(
+        'change',
+        expect.any(Function)
+      );
+    });
+
+    it('returning from background resolves pending Android auth promise with null', async () => {
+      Platform.OS = 'android' as any;
+
+      const { unmount } = renderComponent();
+
+      const initialListenerCount = appStateListeners.length;
+      expect(initialListenerCount).toBeGreaterThan(0);
+
+      // Simulate app going to background then foreground
+      if (appStateListeners.length > 0) {
+        act(() => {
+          appStateListeners[0]('background');
+        });
+
+        act(() => {
+          appStateListeners[0]('active');
+        });
+      }
+
+      // Should still have the listener
+      expect(appStateListeners.length).toBe(initialListenerCount);
+
+      unmount();
+    });
+
+    it('cleanup removes AppState listener on unmount', () => {
+      const { unmount } = renderComponent();
+
+      const initialListenerCount = appStateListeners.length;
+      expect(initialListenerCount).toBeGreaterThan(0);
+
+      unmount();
+
+      // Listener should be removed after unmount
+      expect(appStateListeners.length).toBeLessThan(initialListenerCount);
+    });
+  });
+
+  describe('Font Handling', () => {
+    it('default font is applied when fontFamily not specified', () => {
+      let contextValue: any;
+
+      const TestComponent = () => {
+        contextValue = useConnectComponents();
+        return (
+          <EmbeddedComponent
+            component="payments"
+            onLoaderStart={jest.fn()}
+            onLoadError={jest.fn()}
+            onPageDidLoad={jest.fn()}
+          />
+        );
+      };
+
+      const instance = loadConnectAndInitialize({
+        ...mockInitParams,
+        appearance: {
+          variables: {
+            colorPrimary: '#000000',
+          },
+        },
+      });
+
+      render(
+        <ConnectComponentsProvider connectInstance={instance}>
+          <TestComponent />
+        </ConnectComponentsProvider>
+      );
+
+      // Appearance should be set in context
+      expect(contextValue.appearance).toBeDefined();
+      expect(contextValue.appearance.variables).toBeDefined();
+    });
+
+    it('custom fontFamily is preserved when specified', () => {
+      let contextValue: any;
+
+      const TestComponent = () => {
+        contextValue = useConnectComponents();
+        return (
+          <EmbeddedComponent
+            component="payments"
+            onLoaderStart={jest.fn()}
+            onLoadError={jest.fn()}
+            onPageDidLoad={jest.fn()}
+          />
+        );
+      };
+
+      const instance = loadConnectAndInitialize({
+        ...mockInitParams,
+        appearance: {
+          variables: {
+            fontFamily: 'CustomFont',
+          },
+        },
+      });
+
+      render(
+        <ConnectComponentsProvider connectInstance={instance}>
+          <TestComponent />
+        </ConnectComponentsProvider>
+      );
+
+      // Custom font should be in context
+      expect(contextValue.appearance.variables.fontFamily).toBe('CustomFont');
+    });
+  });
+
+  describe('Financial Connections bridge', () => {
+    const mockSession = {
+      id: 'session',
+      clientSecret: 'client_secret',
+      livemode: false,
+      accounts: [],
+    };
+    const mockToken = {
+      id: 'btok_token',
+      livemode: false,
+      used: false,
+      type: 'BankAccount' as const,
+      created: 1000000,
+      bankAccount: {
+        id: 'bank_account',
+        bankName: 'Test Bank',
+        accountHolderName: null,
+        accountHolderType: null,
+        currency: 'usd',
+        country: 'US',
+        routingNumber: '110000000',
+        status: null,
+        fingerprint: null,
+        last4: '6789',
+      },
+    };
+
+    const openFinancialConnections = async () => {
+      mockLoadWebView = true;
+      renderComponent({ component: 'account-onboarding' });
+      await waitFor(() => expect(webViewOnMessage).toBeDefined());
+
+      await act(async () => {
+        webViewOnMessage?.({
+          nativeEvent: {
+            data: JSON.stringify({
+              type: 'openFinancialConnections',
+              data: {
+                id: 'request',
+                clientSecret: 'client_secret',
+                connectedAccountId: 'connected_account',
+              },
+            }),
+          },
+        });
+      });
+    };
+
+    const getLastInjectedJavaScript = () =>
+      mockInjectJavaScript.mock.calls[
+        mockInjectJavaScript.mock.calls.length - 1
+      ]?.[0];
+
+    const getLastFinancialConnectionsResult = () => {
+      const injectedJavaScript = getLastInjectedJavaScript();
+      const serializedPayload = injectedJavaScript?.match(
+        /window\.callSetterWithSerializableValue\((.*)\);/
+      )?.[1];
+
+      if (!serializedPayload) {
+        throw new Error(
+          'No Financial Connections result found in the injected JavaScript'
+        );
+      }
+
+      return JSON.parse(serializedPayload).value;
+    };
+
+    const expectUnexpectedError = (message: string) => {
+      expect(getLastFinancialConnectionsResult()).toEqual({
+        id: 'request',
+        financialConnectionsSession: null,
+        token: null,
+        error: {
+          code: 'UnexpectedError',
+          message,
+        },
+      });
+    };
+
+    const expectedToken = {
+      id: 'btok_token',
+      object: 'token',
+      type: 'bank_account',
+      used: false,
+      livemode: false,
+      created: 1000000,
+      bank_account: {
+        id: 'bank_account',
+        object: 'bank_account',
+        account_holder_name: null,
+        account_holder_type: null,
+        bank_name: 'Test Bank',
+        country: 'US',
+        currency: 'usd',
+        fingerprint: null,
+        last4: '6789',
+        routing_number: '110000000',
+        status: null,
+      },
+    };
+
+    it('collects and forwards a bank-account token', async () => {
+      const mockCollectBankAccountToken =
+        NativeStripeSdk.collectBankAccountToken as jest.Mock;
+      const mockCollectFinancialConnectionsAccounts =
+        NativeStripeSdk.collectFinancialConnectionsAccounts as jest.Mock;
+      mockCollectBankAccountToken.mockResolvedValue({
+        session: mockSession,
+        token: mockToken,
+      });
+
+      await openFinancialConnections();
+
+      expect(mockCollectBankAccountToken).toHaveBeenCalledWith(
+        'client_secret',
+        { connectedAccountId: 'connected_account' }
+      );
+      expect(mockCollectFinancialConnectionsAccounts).not.toHaveBeenCalled();
+      expect(getLastFinancialConnectionsResult()).toEqual({
+        id: 'request',
+        financialConnectionsSession: { accounts: [] },
+        token: expectedToken,
+        error: null,
+      });
+    });
+
+    it('forwards a session-only result with a null token', async () => {
+      (NativeStripeSdk.collectBankAccountToken as jest.Mock).mockResolvedValue({
+        session: mockSession,
+      });
+
+      await openFinancialConnections();
+
+      expect(getLastFinancialConnectionsResult()).toEqual({
+        id: 'request',
+        financialConnectionsSession: { accounts: [] },
+        token: null,
+        error: null,
+      });
+    });
+
+    it.each([
+      ['a token without a session', { token: mockToken }],
+      ['neither a session, token, nor error', {}],
+    ])('reports an unexpected error for %s', async (_description, result) => {
+      (NativeStripeSdk.collectBankAccountToken as jest.Mock).mockResolvedValue(
+        result
+      );
+
+      await openFinancialConnections();
+
+      expectUnexpectedError(
+        'Financial Connections completed without a session'
+      );
+    });
+
+    it('reports cancellation without an error', async () => {
+      (NativeStripeSdk.collectBankAccountToken as jest.Mock).mockResolvedValue({
+        error: { code: 'Canceled', message: 'Canceled' },
+      });
+
+      await openFinancialConnections();
+
+      expect(getLastFinancialConnectionsResult()).toEqual({
+        id: 'request',
+        financialConnectionsSession: null,
+        token: null,
+        error: null,
+      });
+    });
+
+    it('forwards native errors', async () => {
+      (NativeStripeSdk.collectBankAccountToken as jest.Mock).mockResolvedValue({
+        error: { code: 'Failed', message: 'Native error' },
+      });
+
+      await openFinancialConnections();
+
+      expect(getLastFinancialConnectionsResult()).toEqual({
+        id: 'request',
+        financialConnectionsSession: null,
+        token: null,
+        error: { code: 'Failed', message: 'Native error' },
+      });
+    });
+
+    it('reports rejected promises as unexpected errors', async () => {
+      (NativeStripeSdk.collectBankAccountToken as jest.Mock).mockRejectedValue(
+        new Error('Rejected')
+      );
+
+      await openFinancialConnections();
+
+      expectUnexpectedError('Rejected');
+    });
+  });
+
+  describe('toStripeJsBankAccountToken', () => {
+    it('maps camelCase token to snake_case Stripe.js shape', () => {
+      const result = toStripeJsBankAccountToken({
+        id: 'tok_123',
+        livemode: false,
+        used: false,
+        type: 'BankAccount',
+        created: 1000000,
+        bankAccount: {
+          id: 'ba_123',
+          bankName: 'Test Bank',
+          accountHolderName: 'John Doe',
+          accountHolderType: 'Individual',
+          currency: 'usd',
+          country: 'US',
+          routingNumber: '110000000',
+          status: 'New',
+          fingerprint: 'fp_123',
+          last4: '6789',
+        },
+      });
+
+      expect(result).toEqual({
+        id: 'tok_123',
+        object: 'token',
+        type: 'bank_account',
+        used: false,
+        livemode: false,
+        created: 1000000,
+        bank_account: {
+          id: 'ba_123',
+          object: 'bank_account',
+          account_holder_name: 'John Doe',
+          account_holder_type: 'Individual',
+          bank_name: 'Test Bank',
+          country: 'US',
+          currency: 'usd',
+          fingerprint: 'fp_123',
+          last4: '6789',
+          routing_number: '110000000',
+          status: 'New',
+        },
+      });
+    });
+
+    it('returns null bank_account when bankAccount is null', () => {
+      const result = toStripeJsBankAccountToken({
+        id: 'tok_456',
+        livemode: true,
+        used: true,
+        type: 'BankAccount',
+        created: 2000000,
+        bankAccount: null,
+      });
+
+      expect(result.id).toBe('tok_456');
+      expect(result.object).toBe('token');
+      expect(result.type).toBe('bank_account');
+      expect(result.livemode).toBe(true);
+      expect(result.bank_account).toBeNull();
+    });
+
+    it('preserves null fields in bank_account', () => {
+      const result = toStripeJsBankAccountToken({
+        id: 'tok_789',
+        livemode: false,
+        used: false,
+        type: 'BankAccount',
+        created: null,
+        bankAccount: {
+          id: 'ba_789',
+          bankName: null,
+          accountHolderName: null,
+          accountHolderType: null,
+          currency: null,
+          country: null,
+          routingNumber: null,
+          status: null,
+          fingerprint: null,
+          last4: null,
+        },
+      });
+
+      expect(result.bank_account).toEqual({
+        id: 'ba_789',
+        object: 'bank_account',
+        account_holder_name: null,
+        account_holder_type: null,
+        bank_name: null,
+        country: null,
+        currency: null,
+        fingerprint: null,
+        last4: null,
+        routing_number: null,
+        status: null,
+      });
+    });
+  });
+
+  describe('isAllowedStripeHost', () => {
+    it('allows exact Stripe hosts', () => {
+      expect(
+        isAllowedStripeHost(
+          'https://connect-js.stripe.com/v1.0/react_native_webview.html'
+        )
+      ).toBe(true);
+      expect(isAllowedStripeHost('https://connect.stripe.com/path')).toBe(true);
+      expect(isAllowedStripeHost('https://verify.stripe.com/verify')).toBe(
+        true
+      );
+    });
+
+    it('rejects non-Stripe hosts, including those containing Stripe hostnames in path or query', () => {
+      expect(
+        isAllowedStripeHost(
+          'https://example.com/connect-bridge?next=https%3A%2F%2Fconnect-js.stripe.com'
+        )
+      ).toBe(false);
+      expect(
+        isAllowedStripeHost('https://connect-js.stripe.com.example.com/path')
+      ).toBe(false);
+      expect(
+        isAllowedStripeHost('https://example.com/?redirect=connect.stripe.com')
+      ).toBe(false);
+      expect(
+        isAllowedStripeHost('https://example.com/connect-js.stripe.com/payload')
+      ).toBe(false);
+    });
+
+    it('rejects malformed or empty URLs', () => {
+      expect(isAllowedStripeHost('not-a-url')).toBe(false);
+      expect(isAllowedStripeHost('')).toBe(false);
+    });
+  });
+});

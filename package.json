@@ -1,0 +1,65 @@
+{
+  "name": "@oh-rn/stripe-react-native",
+  "displayName": "Stripe React Native",
+  "version": "0.77.0",
+  "description": "Stripe SDK for React Native",
+  "main": "./src/index.tsx",
+  "module": "./src/index.tsx",
+  "types": "./src/index.tsx",
+  "react-native": "./src/index.tsx",
+  "license": "MIT",
+  "private": false,
+  "repository": "https://github.com/stripe/stripe-react-native",
+  "keywords": [
+    "react-native",
+    "harmony",
+    "harmonyos"
+  ],
+  "homepage": "https://github.com/stripe/stripe-react-native/#readme",
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/"
+  },
+  "files": [
+    "src/",
+    "harmony/",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "prepare": "echo skip-prepare",
+    "codegen-lib": "react-native codegen-harmony --cpp-output-path ./harmony/stripe_react_native/src/main/cpp/generated --ets-output-path ./harmony/stripe_react_native/src/main/ets/generated"
+  },
+  "peerDependencies": {
+    "react-native": ">=0.72"
+  },
+  "devDependencies": {
+    "typescript": "5.0.4",
+    "@react-native/typescript-config": "0.79.5",
+    "react": "18.2.0",
+    "@types/react": "18.2.79",
+    "react-native": "0.72.5",
+    "jest": "^29.6.3",
+    "@react-native-oh/react-native-harmony-cli": "^0.77.50",
+    "metro": "^0.81.0"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "harmony": {
+    "alias": "@stripe/stripe-react-native",
+    "autolinking": {
+      "cmakeLibraryTargetName": "stripe_react_native",
+      "ohPackageName": "@oh-rn/stripe-react-native",
+      "etsPackageClassName": "StripeReactNativePackage",
+      "cppPackageClassName": "StripeReactNativePackage"
+    },
+    "codegenConfig": [
+      {
+        "version": 1,
+        "specPaths": [
+          "./src/specs/v1"
+        ]
+      }
+    ]
+  }
+}
