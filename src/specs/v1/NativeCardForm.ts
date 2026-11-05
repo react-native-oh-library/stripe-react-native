@@ -6,7 +6,7 @@ import type {
 import codegenNativeCommands from 'react-native/Libraries/Utilities/codegenNativeCommands';
 import codegenNativeComponent from 'react-native/Libraries/Utilities/codegenNativeComponent';
 import type { CardFormView } from '../../types';
-import type { UnsafeMixed } from '../utils';
+import type { UnsafeMixed } from './utils';
 
 interface FormCompleteEvent {
   card: UnsafeMixed<CardFormView.Details>;

@@ -1,13 +1,38 @@
 /**
+ * MIT License
+ *
+ * Copyright (C) 2026 Huawei Device Co., Ltd.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+/**
  * StripeApiClient — 基于 @ohos.net.http 的 Stripe REST API v1 客户端。
  *
  * 架构级替代 stripe-android/stripe-ios：移动 SDK 客户端能力本质是 publishable
  * key 直调 api.stripe.com（无 secret key），鸿蒙端复刻同构调用。
  *
- * 平台限制（已查证 @ohos.net.http.md）：
+ * 平台限制（已查证 @ohos.net.http.md 与 communication_netstack 源码）：
  * - POST 默认 content-type 为 application/json，调 Stripe 表单端点必须显式
  *   设置 {'content-Type': 'application/x-www-form-urlencoded'}
  * - 表单数据 key/value 需 URL 编码后以 k1=v1&k2=v2 作为 extraData(string) 传入
+ * - extraData 为空字符串时 netstack 直接判参数解析失败（BusinessError 401
+ *   "Parameter error"，请求不会发出），空表单必须整体省略 extraData 字段
  * - 每个 HttpRequest 一次性使用，用完必须 destroy()
  */
 
@@ -20,7 +45,7 @@ const HILOG_TAG = 'StripeSdk';
 
 export const STRIPE_API_BASE = 'https://api.stripe.com';
 export const STRIPE_API_VERSION = '2024-06-20';
-export const SDK_VERSION = '0.77.0';
+export const SDK_VERSION = '0.76.1-beta.1';
 
 /** Stripe REST 错误响应结构（docs.stripe.com 错误契约） */
 export interface StripeRestError {
@@ -165,11 +190,13 @@ export class StripeApiClient {
         const options: http.HttpRequestOptions = {
           method: method,
           header: this.buildHeaders(),
-          extraData: body,
           expectDataType: http.HttpDataType.STRING,
           connectTimeout: 60000,
           readTimeout: 60000,
         };
+        if (body.length > 0) {
+          options.extraData = body;
+        }
         const response = await httpRequest.request(`${STRIPE_API_BASE}${path}`, options);
         const text = typeof response.result === 'string' ? response.result : JSON.stringify(response.result);
         let parsed: Record<string, Object> = {};

@@ -2,8 +2,8 @@
   "modelVersion": "6.0.1",
   "description": "Please describe the basic information.",
   "dependencies": {
-    "@oh-rn/stripe-react-native": "file:../node_modules/@oh-rn/stripe-react-native/harmony/stripe_react_native.har",
-    "@react-native-ohos/react-native-webview": "file:../node_modules/@react-native-ohos/react-native-webview/harmony/rn_webview.har"
+    "@react-native-ohos/react-native-webview": "file:../node_modules/@react-native-ohos/react-native-webview/harmony/rn_webview.har",
+    "@react-native-ohos/stripe-react-native": "file:../node_modules/@react-native-ohos/stripe-react-native/harmony/stripe_react_native.har"
   },
   "devDependencies": {
   },

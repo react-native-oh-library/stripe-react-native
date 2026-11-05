@@ -10,7 +10,7 @@ import type {
   PaymentSheet,
   StripeError,
 } from '../../types';
-import type { UnsafeMixed } from '../utils';
+import type { UnsafeMixed } from './utils';
 
 type CollectAddressResult = Required<AddressDetails>;
 

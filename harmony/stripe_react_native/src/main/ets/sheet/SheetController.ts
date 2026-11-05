@@ -1,4 +1,27 @@
 /**
+ * MIT License
+ *
+ * Copyright (C) 2026 Huawei Device Co., Ltd.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+/**
  * Sheet 层共享类型与控制器（无 ArkUI 依赖，可被 .ts/.ets 双向导入）。
  */
 
@@ -33,6 +56,9 @@ export class PaymentSheetConfig {
   allowsDelayedPaymentMethods: boolean = false;
   billingDetailsCollectionConfiguration: Record<string, Object> | null = null;
   returnURL: string = '';
+  /** ctoken 自定义流标记（JS 注入 usesConfirmationToken：RNOH 丢函数 key，
+   *  无法像 origin Android hasKey("confirmationTokenConfirmHandler") 探测） */
+  usesConfirmationToken: boolean = false;
   /** present 时由 TurboModule retrieve Intent 预取的金额展示串（如 "$10.00"） */
   displayAmount: string = '';
 }

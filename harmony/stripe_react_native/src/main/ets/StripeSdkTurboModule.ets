@@ -1,4 +1,27 @@
 /**
+ * MIT License
+ *
+ * Copyright (C) 2026 Huawei Device Co., Ltd.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+/**
  * StripeSdkTurboModule — StripeSdk TurboModule 鸿蒙实现（60 方法全签名）。
  *
  * 架构（对照 02-planning.json）：
@@ -102,6 +125,12 @@ export class StripeSdkTurboModule extends UITurboModule implements TM.StripeSdk.
     return p as ESObject as Promise<void>;
   }
 
+  private static sleep(ms: number): Promise<void> {
+    return new Promise<void>((resolve) => {
+      setTimeout(resolve, ms);
+    });
+  }
+
   private errorResult(code: string, message: string): BridgeRecord {
     return { 'code': code, 'message': message };
   }
@@ -183,30 +212,55 @@ export class StripeSdkTurboModule extends UITurboModule implements TM.StripeSdk.
       const path = isPaymentIntent
         ? `/v1/payment_intents/${id}`
         : `/v1/setup_intents/${id}`;
-      const response = await StripeApiClient.shared.get(path, form);
-      current = isPaymentIntent
-        ? StripeModels.paymentIntent(response.body)
-        : StripeModels.setupIntent(response.body);
+      // 2026-11-04 缺陷#14：授权回跳后服务端终态落地存在延迟（实测 eps 流回跳 06:16:56Z →
+      // succeeded 06:19:18Z，滞后约 142s），单次 re-GET 抢跑会把已支付单误判 Canceled。
+      // 改为有界轮询：立即首查 + 2s 间隔 × 90 次（上限约 180s，覆盖实测 142s 滞后），
+      // 瞬态网络错误吞掉续轮；用户取消路径不进此轮询（resultUrl===null 提前返回）。
+      let pollStatus = 'RequiresAction';
+      for (let poll = 0; poll < 90 && pollStatus === 'RequiresAction'; poll++) {
+        if (poll > 0) {
+          await StripeSdkTurboModule.sleep(2000);
+        }
+        try {
+          const response = await StripeApiClient.shared.get(path, form);
+          current = isPaymentIntent
+            ? StripeModels.paymentIntent(response.body)
+            : StripeModels.setupIntent(response.body);
+          pollStatus = StripeModels.str(current, 'status');
+        } catch (err) {
+          hilog.warn(HILOG_DOMAIN, HILOG_TAG, 'post-auth poll retry: %{public}s', JSON.stringify(err));
+        }
+      }
     }
     return current;
   }
 
   // ==================== 表单构建 ====================
 
+  /**
+   * PM 表单键拼接：intent confirm 端点用 `payment_method_data[...]` 前缀，
+   * `/v1/payment_methods` 端点要求平铺（type / card[number] / billing_details[...]）。
+   * Stripe 对未知参数直接报 parameter_unknown（2026-11-02 Card-06 实测）。
+   */
+  private pmKey(prefix: string, key: string): string {
+    return prefix.length > 0 ? `${prefix}[${key}]` : key;
+  }
+
   private appendBillingDetails(form: Map<string, Object>, prefix: string, data: BridgeRecord): void {
     const details = StripeModels.asRecord(data['billingDetails'] ?? null);
     if (details) {
+      const bdPrefix = this.pmKey(prefix, 'billing_details');
       const name = StripeModels.str(details, 'name');
       if (name.length > 0) {
-        form.set(`${prefix}[name]`, name);
+        form.set(`${bdPrefix}[name]`, name);
       }
       const email = StripeModels.str(details, 'email');
       if (email.length > 0) {
-        form.set(`${prefix}[email]`, email);
+        form.set(`${bdPrefix}[email]`, email);
       }
       const phone = StripeModels.str(details, 'phone');
       if (phone.length > 0) {
-        form.set(`${prefix}[phone]`, phone);
+        form.set(`${bdPrefix}[phone]`, phone);
       }
       const address = StripeModels.asRecord(details['address'] ?? null);
       if (address) {
@@ -214,14 +268,15 @@ export class StripeSdkTurboModule extends UITurboModule implements TM.StripeSdk.
         for (const pair of fields) {
           const v = StripeModels.str(address, pair[0]);
           if (v.length > 0) {
-            form.set(`${prefix}[address][${pair[1]}]`, v);
+            form.set(`${bdPrefix}[address][${pair[1]}]`, v);
           }
         }
       }
     }
   }
 
-  private buildPaymentMethodForm(params: BridgeRecord, cardFromSheet: CardFieldSnapshot | null): PaymentMethodFormResult {
+  private buildPaymentMethodForm(params: BridgeRecord, cardFromSheet: CardFieldSnapshot | null,
+    prefix: string = 'payment_method_data'): PaymentMethodFormResult {
     const form = new Map<string, Object>();
     const pmType = StripeModels.str(params, 'paymentMethodType');
     const data = StripeModels.asRecord(params['paymentMethodData'] ?? null) ?? {};
@@ -231,42 +286,44 @@ export class StripeSdkTurboModule extends UITurboModule implements TM.StripeSdk.
       return result;
     }
     const type = pascalToSnake(pmType);
-    const prefix = 'payment_method_data';
-    form.set(`${prefix}[type]`, type);
+    form.set(this.pmKey(prefix, 'type'), type);
 
     if (type === 'card') {
       const token = StripeModels.str(data, 'token');
       if (token.length > 0) {
-        form.set(`${prefix}[card][token]`, token);
+        form.set(`${this.pmKey(prefix, 'card')}[token]`, token);
       } else {
         const card = cardFromSheet ?? CardFieldRegistry.shared.current;
         if (card !== null && card.number.length > 0) {
-          form.set(`${prefix}[card][number]`, card.number);
-          form.set(`${prefix}[card][exp_month]`, card.expiryMonth);
-          form.set(`${prefix}[card][exp_year]`, card.expiryYear);
-          form.set(`${prefix}[card][cvc]`, card.cvc);
+          const cardPrefix = this.pmKey(prefix, 'card');
+          form.set(`${cardPrefix}[number]`, card.number);
+          form.set(`${cardPrefix}[exp_month]`, card.expiryMonth);
+          form.set(`${cardPrefix}[exp_year]`, card.expiryYear);
+          form.set(`${cardPrefix}[cvc]`, card.cvc);
         }
       }
       const cvc = StripeModels.str(data, 'cvc');
       if (cvc.length > 0) {
-        form.set(`${prefix}[card][cvc]`, cvc);
+        form.set(`${this.pmKey(prefix, 'card')}[cvc]`, cvc);
       }
     } else {
       // 其余支付方式：将 paymentMethodData 中的扁平字段按同名 snake 键透传
+      const typePrefix = this.pmKey(prefix, type);
       const keys = Object.keys(data);
       for (const key of keys) {
         const value = data[key];
         if (value !== null && value !== undefined && (typeof value === 'string' || typeof value === 'boolean' || typeof value === 'number')) {
-          form.set(`${prefix}[${type}][${pascalToSnake(key)}]`, value);
+          form.set(`${typePrefix}[${pascalToSnake(key)}]`, value);
         }
       }
     }
     this.appendBillingDetails(form, prefix, data);
     const metadata = StripeModels.asRecord(data['metadata'] ?? null);
     if (metadata) {
+      const mdPrefix = this.pmKey(prefix, 'metadata');
       const keys = Object.keys(metadata);
       for (const key of keys) {
-        form.set(`${prefix}[metadata][${key}]`, String(metadata[key]));
+        form.set(`${mdPrefix}[${key}]`, String(metadata[key]));
       }
     }
     const finalResult: PaymentMethodFormResult = { form: form, paymentMethodId: '' };
@@ -275,7 +332,10 @@ export class StripeSdkTurboModule extends UITurboModule implements TM.StripeSdk.
 
   // ==================== P0：初始化 / 支付引擎 ====================
 
-  initialise(params: Object): Promise<void> {
+  // 注意:Promise 方法必须是 async——非 async 返回的 resolve 值跨 RNOH 桥时
+  // 嵌套 Record 会被包成数组(Card-15 实测 error:[{...}] 而非 error:{...}),
+  // JS 侧 error.message 取值失败;async 方法(如 confirmPayment)均正常
+  async initialise(params: Object): Promise<void> {
     const record = this.rec(params);
     const publishableKey = StripeModels.str(record, 'publishableKey');
     if (publishableKey.length === 0) {
@@ -285,17 +345,14 @@ export class StripeSdkTurboModule extends UITurboModule implements TM.StripeSdk.
     return Promise.resolve();
   }
 
-  createPaymentMethod(params: Object, options: Object): Promise<void> {
+  async createPaymentMethod(params: Object, options: Object): Promise<void> {
     const impl = async (): Promise<BridgeRecord> => {
       try {
-        const built = this.buildPaymentMethodForm(this.rec(params), null);
+        // /v1/payment_methods 端点要求平铺参数（type / card[...]），
+        // payment_method_data[...] 前缀仅适用于 intent confirm 端点
+        const built = this.buildPaymentMethodForm(this.rec(params), null, '');
         if (built.paymentMethodId.length > 0) {
           return { 'error': this.errorResult('Failed', 'paymentMethodId cannot be used with createPaymentMethod') };
-        }
-        const optionRec = this.rec(options);
-        const setupFutureUsage = StripeModels.str(optionRec, 'setupFutureUsage');
-        if (setupFutureUsage.length > 0) {
-          built.form.set('setup_future_usage', setupFutureUsage.toLowerCase());
         }
         const response = await StripeApiClient.shared.post('/v1/payment_methods', built.form);
         return { 'paymentMethod': StripeModels.paymentMethod(response.body) };
@@ -312,7 +369,11 @@ export class StripeSdkTurboModule extends UITurboModule implements TM.StripeSdk.
         const id = this.intentIdFromSecret(paymentIntentClientSecret, 'pi');
         const form = new Map<string, Object>();
         form.set('client_secret', paymentIntentClientSecret);
-        const response = await StripeApiClient.shared.post(`/v1/payment_intents/${id}/confirm`, form);
+        // 对齐原库语义：iOS STPPaymentHandler / Android PaymentLauncher 的 handleNextAction
+        // 是"检索意图并处理既有 next_action"，不做 confirm。POST /confirm 会触发 Stripe
+        // 重确认校验：redirect 型 PM 意图报 missing payment method / return_url required，
+        // 永远到不了认证页（2026-11-04 Card-14 真机定位，pi_3UXv4o 实测）
+        const response = await StripeApiClient.shared.get(`/v1/payment_intents/${id}`, form);
         let intent = StripeModels.paymentIntent(response.body);
         intent = await this.resolveNextActionIfNeeded(intent, true, returnURL ?? '');
         const status = StripeModels.str(intent, 'status');
@@ -333,7 +394,8 @@ export class StripeSdkTurboModule extends UITurboModule implements TM.StripeSdk.
         const id = this.intentIdFromSecret(setupIntentClientSecret, 'seti');
         const form = new Map<string, Object>();
         form.set('client_secret', setupIntentClientSecret);
-        const response = await StripeApiClient.shared.post(`/v1/setup_intents/${id}/confirm`, form);
+        // 同 handleNextAction：检索而非 confirm（对齐原库语义，避免重确认校验拦截 redirect 分支）
+        const response = await StripeApiClient.shared.get(`/v1/setup_intents/${id}`, form);
         let intent = StripeModels.setupIntent(response.body);
         intent = await this.resolveNextActionIfNeeded(intent, false, returnURL ?? '');
         const status = StripeModels.str(intent, 'status');
@@ -460,19 +522,27 @@ export class StripeSdkTurboModule extends UITurboModule implements TM.StripeSdk.
         const type = StripeModels.str(record, 'type');
         const form = new Map<string, Object>();
         if (type === 'Card') {
-          const card = StripeModels.asRecord(record['card'] ?? null) ?? {};
-          const cardFields: string[][] = [['number', 'number'], ['expMonth', 'exp_month'], ['expYear', 'exp_year'], ['cvc', 'cvc'], ['currency', 'currency']];
-          for (const pair of cardFields) {
-            const value = card[pair[0]];
-            if (value !== null && value !== undefined && String(value).length > 0) {
-              form.set(`card[${pair[1]}]`, value);
-            }
+          // 原库语义（Android createTokenFromCard / iOS 同型）：卡号/有效期/CVC
+          // 一律取自 CardField/CardForm 控件（此处为 CardFieldRegistry 快照），
+          // 控件数据不完整时报 "Card details not complete"，不透传 JS 卡对象；
+          // name/currency/address 取 params 顶层（JS CreateCardTokenParams 同型）
+          const snapshot = CardFieldRegistry.shared.current;
+          if (snapshot === null || snapshot.number.length === 0 || snapshot.expiryMonth === 0 || snapshot.cvc.length === 0) {
+            return { 'error': this.errorResult('Failed', 'Card details not complete') };
           }
-          const name = StripeModels.str(card, 'name');
+          form.set('card[number]', snapshot.number);
+          form.set('card[exp_month]', snapshot.expiryMonth);
+          form.set('card[exp_year]', snapshot.expiryYear);
+          form.set('card[cvc]', snapshot.cvc);
+          const name = StripeModels.str(record, 'name');
           if (name.length > 0) {
             form.set('card[name]', name);
           }
-          const address = StripeModels.asRecord(card['address'] ?? null);
+          const currency = StripeModels.str(record, 'currency');
+          if (currency.length > 0) {
+            form.set('card[currency]', currency);
+          }
+          const address = StripeModels.asRecord(record['address'] ?? null);
           if (address) {
             const fields: string[][] = [['city', 'city'], ['country', 'country'], ['line1', 'line1'], ['line2', 'line2'], ['postalCode', 'postal_code'], ['state', 'state']];
             for (const pair of fields) {
@@ -483,16 +553,16 @@ export class StripeSdkTurboModule extends UITurboModule implements TM.StripeSdk.
             }
           }
         } else if (type === 'BankAccount') {
-          const bank = StripeModels.asRecord(record['bankAccount'] ?? null) ?? {};
+          // JS CreateBankAccountTokenParams 为顶层字段（无 bankAccount 嵌套对象）
           const bankFields: string[][] = [['country', 'country'], ['currency', 'currency'], ['accountNumber', 'account_number'], ['routingNumber', 'routing_number'], ['accountHolderName', 'account_holder_name'], ['accountHolderType', 'account_holder_type']];
           for (const pair of bankFields) {
-            const value = bank[pair[0]];
+            const value = record[pair[0]];
             if (value !== null && value !== undefined && String(value).length > 0) {
               form.set(`bank_account[${pair[1]}]`, value);
             }
           }
         } else if (type === 'Pii') {
-          form.set('pii[personal_id]', StripeModels.str(record, 'personalId'));
+          form.set('pii[personal_id_number]', StripeModels.str(record, 'personalId'));
         } else {
           return { 'error': this.errorResult('Failed', `Unsupported token type: ${type}`) };
         }
@@ -513,7 +583,7 @@ export class StripeSdkTurboModule extends UITurboModule implements TM.StripeSdk.
       ISSUING: '2022-08-01',
     };
     const systemInfo: SystemInfoResult = {
-      sdkVersion: '0.77.0',
+      sdkVersion: '0.76.1-beta.1',
       osVersion: DeviceEnv.osVersion,
       deviceType: DeviceEnv.deviceType,
       appName: DeviceEnv.appName,
@@ -530,7 +600,7 @@ export class StripeSdkTurboModule extends UITurboModule implements TM.StripeSdk.
 
   // ==================== P1：PaymentSheet ====================
 
-  initPaymentSheet(params: Object): Promise<void> {
+  async initPaymentSheet(params: Object): Promise<void> {
     const record = this.rec(params);
     const config = new PaymentSheetConfig();
     config.paymentIntentClientSecret = StripeModels.str(record, 'paymentIntentClientSecret');
@@ -540,7 +610,8 @@ export class StripeSdkTurboModule extends UITurboModule implements TM.StripeSdk.
     config.customerId = StripeModels.str(record, 'customerId');
     config.customerEphemeralKeySecret = StripeModels.str(record, 'customerEphemeralKeySecret');
     config.primaryButtonLabel = StripeModels.str(record, 'primaryButtonLabel');
-    config.returnURL = StripeModels.str(record, 'urlScheme');
+    // SetupParams 字段名为 returnURL（与 initCustomerSheet 保持一致），此前误读 urlScheme 导致恒为空
+    config.returnURL = StripeModels.str(record, 'returnURL');
     config.allowsDelayedPaymentMethods = StripeModels.bool(record, 'allowsDelayedPaymentMethods');
     const billing = StripeModels.asRecord(record['defaultBillingDetails'] ?? null);
     config.defaultBillingDetails = billing;
@@ -549,8 +620,9 @@ export class StripeSdkTurboModule extends UITurboModule implements TM.StripeSdk.
     const bdcc = StripeModels.asRecord(record['billingDetailsCollectionConfiguration'] ?? null);
     config.billingDetailsCollectionConfiguration = bdcc;
     // intentConfiguration（现代流）：mode 提供金额展示；存在 intentConfiguration 即为
-    // confirmHandler 自定义流（对齐 Android buildIntentConfiguration 语义——confirmHandler
-    // 是 JS 侧回调，函数值不跨桥，原生以 intentConfiguration 存在性判定该流）
+    // 自定义流（对齐 Android buildIntentConfiguration 语义——confirmHandler /
+    // confirmationTokenConfirmHandler 是 JS 侧回调，函数值不跨桥；ctoken 变体由 JS
+    // 注入 usesConfirmationToken 标记区分，对齐 origin PaymentSheetManager.kt:231 分流）
     const intentConfig = StripeModels.asRecord(record['intentConfiguration'] ?? null);
     if (intentConfig !== null) {
       const mode = StripeModels.asRecord(intentConfig['mode'] ?? null);
@@ -561,10 +633,15 @@ export class StripeSdkTurboModule extends UITurboModule implements TM.StripeSdk.
           config.displayAmount = this.formatAmount(amount, currency);
         }
       }
+      config.usesConfirmationToken = intentConfig['usesConfirmationToken'] === true;
       config.customFlow = true;
     }
     this.paymentSheetConfig = config;
-    return Promise.resolve();
+    // 对齐 Android PaymentSheetManager.configure:成功 resolve 空对象 {}
+    // (spec 声明 Promise<InitPaymentSheetResult>,resolve undefined 会让 JS 层
+    //  result.error 抛 TypeError,initPaymentSheet 恒返回 {error})
+    const empty: BridgeRecord = {};
+    return StripeSdkTurboModule.voidPromise(Promise.resolve(empty as Object));
   }
 
   private formatAmount(minorUnits: number, currency: string): string {
@@ -626,8 +703,14 @@ export class StripeSdkTurboModule extends UITurboModule implements TM.StripeSdk.
     }
   }
 
-  /** customFlow：创建 PM 并发射 onConfirmHandlerCallback，返回 { awaitingMerchant: true } */
+  /** customFlow：按配置分流——confirmHandler 建卡 PM 发 onConfirmHandlerCallback；
+   *  confirmationTokenConfirmHandler 建 Confirmation Token 发 ctoken 事件（缺陷#15） */
   private async startSheetCustomFlow(card: CardFieldSnapshot, config: PaymentSheetConfig): Promise<BridgeRecord> {
+    // ctoken 流（对齐 origin PaymentSheetManager.kt:231 分流判定；差异：RNOH 丢函数
+    // key，标记由 JS 注入 usesConfirmationToken）
+    if (config.usesConfirmationToken) {
+      return await this.startSheetCtokenFlow(card, config);
+    }
     try {
       const form = new Map<string, Object>();
       form.set('type', 'card');
@@ -659,6 +742,97 @@ export class StripeSdkTurboModule extends UITurboModule implements TM.StripeSdk.
       }
       // 未提供 secret（legacy customFlow）：等待 confirmPaymentSheetPayment
       return { 'awaitingMerchant': true };
+    } catch (err) {
+      return { 'error': this.apiException(err, 'Failed') };
+    }
+  }
+
+  /**
+   * customFlow-ctoken（缺陷#15）：创建 Confirmation Token 并发射
+   * onConfirmationTokenHandlerCallback，等 JS 回传 clientSecret 后以
+   * confirmation_token 确认 intent。对齐 origin Android
+   * PaymentSheetManager.buildCreateConfirmationTokenCallback +
+   * Mappers.mapFromConfirmationToken（payload 字段 camelCase 对齐）。
+   */
+  private async startSheetCtokenFlow(card: CardFieldSnapshot, config: PaymentSheetConfig): Promise<BridgeRecord> {
+    try {
+      // 两步建 token（2026-11-04 实测）：pk + 原始卡号直传 payment_method_data[card]
+      // 会被 Stripe 拒绝："This publishable key tokenization request is required to
+      // use the Stripe SDK."（该 tokenization 形态仅对官方 SDK 开放，不得伪装 SDK UA）。
+      // 合法等价路径：先以 pk 建 PM（/v1/payment_methods 对通用客户端放行），
+      // 再以 payment_method=<pm_id> 挂接建 ctoken（不携带原始卡数据，实测放行）。
+      const pmForm = new Map<string, Object>();
+      pmForm.set('type', 'card');
+      pmForm.set('card[number]', card.number);
+      pmForm.set('card[exp_month]', card.expiryMonth);
+      pmForm.set('card[exp_year]', card.expiryYear);
+      pmForm.set('card[cvc]', card.cvc);
+      const pmResponse = await StripeApiClient.shared.post('/v1/payment_methods', pmForm);
+      const pmId = StripeModels.str(StripeModels.asRecord(pmResponse.body) ?? {}, 'id');
+      if (pmId.length === 0) {
+        return { 'error': this.errorResult('Failed', 'Failed to create PaymentMethod for Confirmation Token') };
+      }
+      const form = new Map<string, Object>();
+      form.set('payment_method', pmId);
+      const response = await StripeApiClient.shared.post('/v1/confirmation_tokens', form);
+      const body = StripeModels.asRecord(response.body) ?? {};
+      const ctokenId = StripeModels.str(body, 'id');
+      if (ctokenId.length === 0) {
+        return { 'error': this.errorResult('Failed', 'Failed to create Confirmation Token') };
+      }
+      const token: BridgeRecord = {
+        'id': ctokenId,
+        'created': StripeModels.num(body, 'created', 0),
+        'expiresAt': StripeModels.num(body, 'expires_at', 0),
+        'liveMode': String(body['livemode']) === 'true',
+        'setupFutureUsage': StripeModels.str(body, 'setup_future_usage'),
+      };
+      const previewRaw = StripeModels.asRecord(body['payment_method_preview'] ?? null);
+      if (previewRaw !== null) {
+        const preview: BridgeRecord = { 'type': StripeModels.str(previewRaw, 'type') };
+        const cardRaw = StripeModels.asRecord(previewRaw['card'] ?? null);
+        if (cardRaw !== null) {
+          const previewCard: BridgeRecord = { 'last4': StripeModels.str(cardRaw, 'last4') };
+          preview['card'] = previewCard;
+        }
+        token['paymentMethodPreview'] = preview;
+      }
+      const waitPromise = this.callbacks.awaitCallback(CallbackMethodKeys.CONFIRMATION_TOKEN_CREATION, 120000);
+      this.emitter.emit(StripeSdkEvents.ON_CONFIRMATION_TOKEN_HANDLER_CALLBACK, {
+        'confirmationToken': token,
+      });
+      const creation = await waitPromise;
+      const clientSecret = StripeModels.str(creation, 'clientSecret');
+      if (clientSecret.length > 0) {
+        return await this.confirmWithConfirmationToken(clientSecret, ctokenId, config);
+      }
+      const creationError = StripeModels.asRecord(creation['error'] ?? null);
+      if (creationError !== null) {
+        return { 'error': StripeModels.toBridgeError(new Error(StripeModels.str(creationError, 'message')), 'Failed') };
+      }
+      // 未提供 secret：与 PM 流同语义，等待商户侧 confirmPaymentSheetPayment
+      return { 'awaitingMerchant': true };
+    } catch (err) {
+      return { 'error': this.apiException(err, 'Failed') };
+    }
+  }
+
+  /** ctoken 流确认：以 confirmation_token 引用确认 intent（区别于 PM 流的 payment_method） */
+  private async confirmWithConfirmationToken(clientSecret: string, confirmationTokenId: string, config: PaymentSheetConfig): Promise<BridgeRecord> {
+    try {
+      const isPI = clientSecret.startsWith('pi_');
+      const id = this.intentIdFromSecret(clientSecret, isPI ? 'pi' : 'seti');
+      const form = new Map<string, Object>();
+      form.set('client_secret', clientSecret);
+      form.set('confirmation_token', confirmationTokenId);
+      const path = isPI ? `/v1/payment_intents/${id}/confirm` : `/v1/setup_intents/${id}/confirm`;
+      const response = await StripeApiClient.shared.post(path, form);
+      let intent = isPI ? StripeModels.paymentIntent(response.body) : StripeModels.setupIntent(response.body);
+      intent = await this.resolveNextActionIfNeeded(intent, isPI, config.returnURL);
+      const intentResultKey = isPI ? 'paymentIntent' : 'setupIntent';
+      const result: BridgeRecord = {};
+      result[intentResultKey] = intent;
+      return result;
     } catch (err) {
       return { 'error': this.apiException(err, 'Failed') };
     }
@@ -801,12 +975,14 @@ export class StripeSdkTurboModule extends UITurboModule implements TM.StripeSdk.
   async resetPaymentSheetCustomer(): Promise<void> {
     this.callbacks.cancelAll();
     this.pendingSheetPaymentMethod = null;
-    return Promise.resolve();
+    // 对齐 Android:promise.resolve(null) —— JS 层 Promise<null>,undefined 会让
+    // App 侧 safeStringify 显示 undefined 而非预期的 null
+    return StripeSdkTurboModule.voidPromise(Promise.resolve(null as ESObject as Object));
   }
 
   // ==================== P1：CustomerSheet ====================
 
-  initCustomerSheet(params: Object, customerAdapterOverrides: Object): Promise<Object> {
+  async initCustomerSheet(params: Object, customerAdapterOverrides: Object): Promise<Object> {
     const record = this.rec(params);
     const config = new CustomerSheetConfig();
     config.customerId = StripeModels.str(record, 'customerId');
@@ -844,6 +1020,14 @@ export class StripeSdkTurboModule extends UITurboModule implements TM.StripeSdk.
   }
 
   private async fetchCustomerPaymentMethods(): Promise<CustomerPaymentMethodItem[]> {
+    // 无 CustomerAdapter(fetchPaymentMethods)时不要等 JS 回调——CS-01 演示配置不带
+    // adapter,监听不存在,120s 超时前收银台恒显"加载支付方式…"(CS-02 实测)。
+    // 对齐 origin:无 adapter 走 ephemeral-key REST,失败也是秒级在 sheet 内展示错误
+    const cfg = this.customerSheetConfig;
+    const overrides = cfg !== null ? cfg.customerAdapterOverrides : null;
+    if (overrides === null || overrides['fetchPaymentMethods'] !== true) {
+      return Promise.reject(new Error('fetchPaymentMethods requires a customerAdapter (ephemeral key flow is not available on HarmonyOS)'));
+    }
     const wait = this.callbacks.awaitCallback(CallbackMethodKeys.CUSTOMER_ADAPTER_FETCH_PAYMENT_METHODS, 120000);
     this.emitter.emit(StripeSdkEvents.ON_CUSTOMER_ADAPTER_FETCH_PAYMENT_METHODS, {});
     const result = await wait;
@@ -972,9 +1156,11 @@ export class StripeSdkTurboModule extends UITurboModule implements TM.StripeSdk.
         form.set('amounts[0]', amounts[0]);
         form.set('amounts[1]', amounts[1]);
       }
-      const descriptor = StripeModels.str(record, 'descriptor');
-      if (descriptor.length > 0) {
-        form.set('descriptor', descriptor);
+      // JS 层 VerifyMicrodepositsParams 字段为 descriptorCode,
+      // REST 参数名对齐 Android VerifyMicrodepositsForPaymentParams: descriptor_code
+      const descriptorCode = StripeModels.str(record, 'descriptorCode');
+      if (descriptorCode.length > 0) {
+        form.set('descriptor_code', descriptorCode);
       }
       const path = isPaymentIntent
         ? `/v1/payment_intents/${id}/verify_microdeposits`
@@ -996,7 +1182,9 @@ export class StripeSdkTurboModule extends UITurboModule implements TM.StripeSdk.
     try {
       const record = this.rec(params);
       const form = new Map<string, Object>();
-      form.set('payment_method_data[type]', 'us_bank_account');
+      // /v1/payment_methods 端点要求平铺参数，与 collectBankAccount 的两段式
+      // （先建 PM 再 confirm intent）配合
+      form.set('type', 'us_bank_account');
       const pmData = StripeModels.asRecord(record['paymentMethodData'] ?? null) ?? {};
       const accountNumber = StripeModels.str(pmData, 'accountNumber');
       const routingNumber = StripeModels.str(pmData, 'routingNumber');
@@ -1004,21 +1192,21 @@ export class StripeSdkTurboModule extends UITurboModule implements TM.StripeSdk.
         const missing: BridgeRecord = { 'error': this.errorResult('Failed', 'accountNumber and routingNumber are required') };
         return missing;
       }
-      form.set('payment_method_data[us_bank_account][account_number]', accountNumber);
-      form.set('payment_method_data[us_bank_account][routing_number]', routingNumber);
+      form.set('us_bank_account[account_number]', accountNumber);
+      form.set('us_bank_account[routing_number]', routingNumber);
       const holderType = StripeModels.str(pmData, 'accountHolderType');
       if (holderType.length > 0) {
-        form.set('payment_method_data[us_bank_account][account_holder_type]', holderType.toLowerCase());
+        form.set('us_bank_account[account_holder_type]', holderType.toLowerCase());
       }
       const billing = StripeModels.asRecord(pmData['billingDetails'] ?? null);
       if (billing !== null) {
         const name = StripeModels.str(billing, 'name');
         if (name.length > 0) {
-          form.set('payment_method_data[billing_details][name]', name);
+          form.set('billing_details[name]', name);
         }
         const email = StripeModels.str(billing, 'email');
         if (email.length > 0) {
-          form.set('payment_method_data[billing_details][email]', email);
+          form.set('billing_details[email]', email);
         }
       }
       const pmResponse = await StripeApiClient.shared.post('/v1/payment_methods', form);
@@ -1068,6 +1256,8 @@ export class StripeSdkTurboModule extends UITurboModule implements TM.StripeSdk.
   }
 
   async createRadarSession(): Promise<void> {
+    // 注意：/v1/radar_sessions 非公开 REST 端点（原 SDK 经闭源风控通道获取会话），
+    // pk 直调恒返回 Unrecognized request URL 错误，本方法实际恒走 catch 分支返回结构化错误
     const impl = async (): Promise<BridgeRecord> => {
       try {
         const form = new Map<string, Object>();

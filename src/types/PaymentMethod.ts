@@ -293,6 +293,11 @@ export type CollectBankAccountParams = {
       name: string;
       email?: string;
     };
+    // OHOS 移植：无 Financial Connections 托管 UI，走 REST 直建 us_bank_account PM，
+    // 需显式提供银行账号（上游由 FC 采集，此处开放给调用方）
+    accountNumber?: string;
+    routingNumber?: string;
+    accountHolderType?: 'individual' | 'company';
   };
   /** iOS only. Style options for colors in Financial Connections. By default, the bank account collector will automatically switch between light and dark mode compatible colors based on device settings. */
   style?: UserInterfaceStyle;

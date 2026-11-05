@@ -1,7 +1,7 @@
 import { TurboModuleRegistry } from 'react-native';
 import type { TurboModule } from 'react-native/Libraries/TurboModule/RCTExport';
 import type { Address, InitialiseParams, Onramp } from '../../types';
-import type { UnsafeObject } from '../utils';
+import type { UnsafeObject } from './utils';
 
 export interface Spec extends TurboModule {
   initialise(params: UnsafeObject<InitialiseParams>): Promise<void>;

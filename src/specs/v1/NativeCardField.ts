@@ -10,7 +10,7 @@ import type {
   Placeholders,
   Styles,
 } from '../../types/components/CardFieldInput';
-import type { UnsafeMixed } from '../utils';
+import type { UnsafeMixed } from './utils';
 
 type CardChangeEvent = Readonly<{
   card: UnsafeMixed<Details>;

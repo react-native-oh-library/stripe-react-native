@@ -3,7 +3,7 @@ import codegenNativeCommands from 'react-native/Libraries/Utilities/codegenNativ
 import codegenNativeComponent from 'react-native/Libraries/Utilities/codegenNativeComponent';
 import { EmbeddedPaymentElementConfiguration } from '../../types/EmbeddedPaymentElement';
 import { IntentConfiguration } from '../../types/PaymentSheet';
-import type { UnsafeMixed } from '../utils';
+import type { UnsafeMixed } from './utils';
 
 export interface NativeProps extends ViewProps {
   configuration: UnsafeMixed<EmbeddedPaymentElementConfiguration>;

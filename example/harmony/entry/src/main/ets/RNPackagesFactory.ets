@@ -7,7 +7,7 @@ import { RNPackageContext, RNPackage } from '@rnoh/react-native-openharmony/ts';
 import { createRNOHPackages as createRNOHPackagesAutolinking } from './RNOHPackagesFactory';
 
 // 手动注册导入示例（不支持autolink的插件）:
-// import { YourPackage } from '@oh-rn/your-package/ts';
+// import { YourPackage } from '@react-native-ohos/your-package/ts';
 
 export function createRNPackages(ctx: RNPackageContext): RNPackage[] {
   return [

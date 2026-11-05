@@ -66,9 +66,9 @@ describe('src/components/StripeProvider.tsx（initStripe）', () => {
     expect(nativeSdk.initialise).toHaveBeenCalledWith({
       publishableKey: 'pk_test',
       appInfo: {
-        name: '@oh-rn/stripe-react-native',
+        name: '@react-native-ohos/stripe-react-native',
         url: 'https://github.com/stripe/stripe-react-native',
-        version: '0.77.0',
+        version: '0.76.1-beta.1',
         partnerId: undefined,
       },
     });
@@ -117,9 +117,9 @@ describe('src/components/StripeProvider.tsx（initStripe）', () => {
     expect(nativeSdk.initialise).toHaveBeenCalledWith({
       publishableKey: 'pk_test',
       appInfo: {
-        name: '@oh-rn/stripe-react-native/expo',
+        name: '@react-native-ohos/stripe-react-native/expo',
         url: 'https://github.com/stripe/stripe-react-native',
-        version: '0.77.0',
+        version: '0.76.1-beta.1',
         partnerId: 'pp_partner_JBN7LkABco2yUu',
       },
     });

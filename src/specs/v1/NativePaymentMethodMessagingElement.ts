@@ -4,7 +4,7 @@ import {
   PaymentMethodMessagingElementAppearance,
   PaymentMethodMessagingElementConfiguration,
 } from '../../types/components/PaymentMethodMessagingElementComponent';
-import { UnsafeMixed } from '../utils';
+import { UnsafeMixed } from './utils';
 
 export interface NativeProps extends ViewProps {
   appearance?: UnsafeMixed<PaymentMethodMessagingElementAppearance>;

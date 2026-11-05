@@ -345,5 +345,10 @@ export type CollectBankAccountParams = {
     };
     mandateData?: MandateData;
     metadata?: MetaData;
+    // OHOS 移植：无 Financial Connections 托管 UI，走 REST 直建 us_bank_account PM，
+    // 需显式提供银行账号（上游由 FC 采集，此处开放给调用方）
+    accountNumber?: string;
+    routingNumber?: string;
+    accountHolderType?: 'individual' | 'company';
   };
 };

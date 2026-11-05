@@ -42,7 +42,7 @@ import type {
   EmbeddedPaymentElementResult,
 } from '../../types/EmbeddedPaymentElement';
 import type { IntentConfiguration } from '../../types/PaymentSheet';
-import type { UnsafeObject } from '../utils';
+import type { UnsafeObject } from './utils';
 
 type CustomerSheetInitResult = UnsafeObject<{
   error?: StripeError<CustomerSheetError>;

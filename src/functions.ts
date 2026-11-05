@@ -358,9 +358,25 @@ export const initPaymentSheet = async (
   params: PaymentSheet.SetupParams
 ): Promise<InitPaymentSheetResult> => {
   let result;
+  // 缺陷#15 端口适配：RNOH 桥将函数值连同 key 一并丢弃，origin Android 靠
+  // intentConfigMap.hasKey("confirmationTokenConfirmHandler") 的分流判定在鸿蒙不可用，
+  // 故显式注入可序列化标记 usesConfirmationToken 供原生做 PM/ctoken 分流；
+  // 同时先统一注销两组监听器再按配置注册，避免配置切换后旧监听器存活、
+  // sheet 确认被错误 handler 接单（PS-09 实测：ctoken init 后旧 confirmHandler 接单）。
+  confirmHandlerCallback?.remove();
+  confirmHandlerCallback = null;
+  confirmationTokenHandlerCallback?.remove();
+  confirmationTokenHandlerCallback = null;
   const confirmHandler = params?.intentConfiguration?.confirmHandler;
+  const confirmationTokenHandler =
+    params?.intentConfiguration?.confirmationTokenConfirmHandler;
+  if (params?.intentConfiguration) {
+    params.intentConfiguration = {
+      ...params.intentConfiguration,
+      usesConfirmationToken: Boolean(confirmationTokenHandler),
+    } as PaymentSheet.IntentConfiguration;
+  }
   if (confirmHandler) {
-    confirmHandlerCallback?.remove();
     confirmHandlerCallback = addListener(
       'onConfirmHandlerCallback',
       ({ paymentMethod, shouldSavePaymentMethod }) => {
@@ -373,10 +389,7 @@ export const initPaymentSheet = async (
     );
   }
 
-  const confirmationTokenHandler =
-    params?.intentConfiguration?.confirmationTokenConfirmHandler;
   if (confirmationTokenHandler) {
-    confirmationTokenHandlerCallback?.remove();
     confirmationTokenHandlerCallback = addListener(
       'onConfirmationTokenHandlerCallback',
       ({ confirmationToken }) => {

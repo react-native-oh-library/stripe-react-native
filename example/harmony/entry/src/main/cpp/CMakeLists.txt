@@ -132,7 +132,7 @@ endif()
 
 # RNOH_BEGIN: add_plugin_subdirectories
 # 手动注册示例（不支持autolink的插件）:
-# add_subdirectory("${OH_MODULE_DIR}/@oh-rn/YOUR_PACKAGE_NAME/src/main/cpp" ./YOUR_TARGET_NAME)
+# add_subdirectory("${OH_MODULE_DIR}/@react-native-ohos/YOUR_PACKAGE_NAME/src/main/cpp" ./YOUR_TARGET_NAME)
 # target_compile_options(YOUR_TARGET_NAME PUBLIC ${folly_compile_options)
 # autolink支持:
 include("${CMAKE_CURRENT_SOURCE_DIR}/autolinking.cmake")

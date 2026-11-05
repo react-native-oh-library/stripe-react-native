@@ -1,4 +1,27 @@
 /**
+ * MIT License
+ *
+ * Copyright (C) 2026 Huawei Device Co., Ltd.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+/**
  * CardBrand — 卡品牌规则库（BIN 段、卡号长度、CVC 长度）。
  * 参照 stripe-android CardBrand 的判定规则（交互规格对齐 Android CardInputView）。
  */
@@ -73,7 +96,10 @@ export class CardBrandDetector {
   static detect(numberOrBin: string): CardBrandRule {
     const digits = numberOrBin.replace(new RegExp('[^0-9]', 'g'), '');
     if (digits.length === 0) {
-      return VISA; // 空输入按 stripe-android 语义返回默认品牌（Visa）
+      // 空输入返回 Unknown（对齐 origin 所钉 stripe-android 23.17.1：
+      // CardUtils.getPossibleCardBrand("") == CardBrand.Unknown，JS 类型 CardBrand
+      // 联合含 'Unknown' 即为此场景；clear() 后 onCardChange 应报 Unknown 而非 Visa）
+      return new CardBrandRule('Unknown', 'Unknown', CardBrandEnum.Unknown, [16, 17, 18, 19], 3, []);
     }
     let best: CardBrandRule | null = null;
     let bestLen = 0;

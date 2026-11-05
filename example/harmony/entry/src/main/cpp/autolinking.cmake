@@ -4,12 +4,12 @@ cmake_minimum_required(VERSION 3.5)
 
 # @actor RNOH_APP
 function(autolink_libraries target)
-    add_subdirectory("${OH_MODULES_DIR}/@oh-rn/stripe-react-native/src/main/cpp" ./stripe_react_native)
     add_subdirectory("${OH_MODULES_DIR}/@react-native-ohos/react-native-webview/src/main/cpp" ./rnoh_webview)
+    add_subdirectory("${OH_MODULES_DIR}/@react-native-ohos/stripe-react-native/src/main/cpp" ./stripe_react_native)
 
     set(AUTOLINKED_LIBRARIES
-        stripe_react_native
         rnoh_webview
+        stripe_react_native
     )
 
     foreach(lib ${AUTOLINKED_LIBRARIES})

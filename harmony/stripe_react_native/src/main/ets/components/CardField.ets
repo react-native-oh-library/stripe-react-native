@@ -1,4 +1,27 @@
 /**
+ * MIT License
+ *
+ * Copyright (C) 2026 Huawei Device Co., Ltd.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+/**
  * CardField — Fabric 卡号输入组件（ArkTS 叶子组件）。
  *
  * 安全模型（对照 02-planning 决策「卡号输入安全」）：
@@ -53,21 +76,13 @@ export struct CardField {
   aboutToAppear(): void {
     this.eventEmitter = new Spec.EventEmitter(this.ctx.rnInstance, this.tag);
 
+    // subscribeToDescriptorChanges 只监听后续变更，不会以初始 descriptor 立即回调，
+    // 需主动读取当前 props 应用一次，否则首帧全部为默认值（与 StripeContainer 同型）
+    this.applyDescriptor(this.ctx.descriptorRegistry.getDescriptor<Spec.Descriptor>(this.tag));
     this.cleanUpCallbacks.push(
-      this.ctx.descriptorRegistry.subscribeToDescriptorChanges(
-        this.tag,
-        (descriptor) => {
-          const rawProps = (descriptor as Spec.Descriptor).rawProps as Spec.DirectRawProps;
-          if (rawProps) {
-            this.autofocus = rawProps.autofocus ?? false;
-            this.isDisabled = rawProps.disabled ?? false;
-            this.dangerouslyGetFullCardDetails = rawProps.dangerouslyGetFullCardDetails ?? false;
-            this.postalCodeEnabled = rawProps.postalCodeEnabled ?? true;
-            this.applyCardStyle(rawProps.cardStyle as Object);
-            this.applyPlaceholders(rawProps.placeholders as Object);
-          }
-        }
-      )
+      this.ctx.descriptorRegistry.subscribeToDescriptorChanges(this.tag, (descriptor) => {
+        this.applyDescriptor(descriptor as Spec.Descriptor);
+      })
     );
 
     this.cleanUpCallbacks.push(
@@ -96,6 +111,18 @@ export struct CardField {
     CardFieldRegistry.shared.clear();
     for (const cb of this.cleanUpCallbacks) {
       cb();
+    }
+  }
+
+  private applyDescriptor(descriptor: Spec.Descriptor): void {
+    const rawProps = descriptor.rawProps as Spec.DirectRawProps;
+    if (rawProps) {
+      this.autofocus = rawProps.autofocus ?? false;
+      this.isDisabled = rawProps.disabled ?? false;
+      this.dangerouslyGetFullCardDetails = rawProps.dangerouslyGetFullCardDetails ?? false;
+      this.postalCodeEnabled = rawProps.postalCodeEnabled ?? true;
+      this.applyCardStyle(rawProps.cardStyle as Object);
+      this.applyPlaceholders(rawProps.placeholders as Object);
     }
   }
 
@@ -173,6 +200,15 @@ export struct CardField {
     this.publishCardChange();
   }
 
+  /** 编程式聚焦(auto-advance):对齐 stripe-android 子字段输满即自动前进的原生行为 */
+  private focusInput(key: string): void {
+    try {
+      this.getUIContext().getFocusController().requestFocus(key);
+    } catch (e) {
+      hilog.debug(0, 'StripeCardField', 'requestFocus %{public}s unavailable', key);
+    }
+  }
+
   private emitFocusChange(field: string | null): void {
     this.eventEmitter?.emit('focusChange', { focusedField: field === null ? '' : field });
   }
@@ -243,8 +279,13 @@ export struct CardField {
               this.emitFocusChange(null);
             })
             .onChange((value: string) => {
-              this.cardNumber = CardValidator.formatNumber(CardBrandDetector.detect(value), value);
+              const brand = CardBrandDetector.detect(value);
+              this.cardNumber = CardValidator.formatNumber(brand, value);
               this.publishCardChange();
+              // 对齐 stripe-android:卡号有效(长度+Luhn)即自动前进到有效期
+              if (CardValidator.validateNumber(brand, this.cardNumber) === 'Valid') {
+                this.focusInput(`stripe_cardfield_expiry_${this.tag}`);
+              }
             })
         }
         .width('100%')
@@ -257,6 +298,7 @@ export struct CardField {
         // 有效期 / CVC / 邮编行
         Row() {
           TextInput({ text: this.expiry, placeholder: this.placeholderExpiration })
+            .id(`stripe_cardfield_expiry_${this.tag}`)
             .type(InputType.Normal)
             .inputFilter('[0-9/]')
             .maxLength(5)
@@ -278,9 +320,15 @@ export struct CardField {
             .onChange((value: string) => {
               this.expiry = CardValidator.formatExpiry(value);
               this.publishCardChange();
+              // 有效期输满且合法 → 自动前进到 CVC(对齐 stripe-android)
+              const parsed = CardValidator.parseExpiry(this.expiry);
+              if (CardValidator.validateExpiry(parsed.month, parsed.year) === 'Valid') {
+                this.focusInput(`stripe_cardfield_cvc_${this.tag}`);
+              }
             })
 
           TextInput({ text: this.cvc, placeholder: this.placeholderCvc })
+            .id(`stripe_cardfield_cvc_${this.tag}`)
             .type(InputType.Normal)
             .inputFilter('[0-9]')
             .maxLength(4)
@@ -303,10 +351,16 @@ export struct CardField {
             .onChange((value: string) => {
               this.cvc = value.replace(new RegExp('[^0-9]', 'g'), '');
               this.publishCardChange();
+              // CVC 达到品牌位数(Amex 4/其余 3)→ 自动前进到邮编(对齐 stripe-android)
+              const brand = CardBrandDetector.detect(this.cardNumber);
+              if (this.postalCodeEnabled && this.cvc.length >= brand.cvcLength) {
+                this.focusInput(`stripe_cardfield_postal_${this.tag}`);
+              }
             })
 
           if (this.postalCodeEnabled) {
             TextInput({ text: this.postalCode, placeholder: this.placeholderPostalCode })
+              .id(`stripe_cardfield_postal_${this.tag}`)
               .type(InputType.Normal)
               .maxLength(10)
               .fontSize(this.fontSize)

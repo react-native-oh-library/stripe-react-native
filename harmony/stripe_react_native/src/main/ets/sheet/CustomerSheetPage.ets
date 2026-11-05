@@ -1,4 +1,27 @@
 /**
+ * MIT License
+ *
+ * Copyright (C) 2026 Huawei Device Co., Ltd.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+/**
  * CustomerSheetPage — 客户支付方式管理页（P1）。
  *
  * 数据经 CustomerSheetFlowHandler 双向回调获取（复刻 Android
@@ -14,6 +37,9 @@ export struct CustomerSheetPage {
   config: CustomerSheetConfig | null = null;
   flowHandler: CustomerSheetFlowHandler | null = null;
   onFinished: (result: Record<string, Object>) => void = (result: Record<string, Object>) => {
+  };
+  /** 弹窗内容自关闭通道（同 PaymentSheetPage，2026-11-04 close() 外部微任务失效修复） */
+  closeDialog: () => void = () => {
   };
 
   @State private items: CustomerPaymentMethodItem[] = [];
@@ -63,6 +89,7 @@ export struct CustomerSheetPage {
     }
     const selection: Record<string, Object> = { 'paymentOption': item.id };
     this.onFinished(selection);
+    this.closeDialog();
   }
 
   build() {
@@ -155,6 +182,7 @@ export struct CustomerSheetPage {
         .onClick(() => {
           const canceled: Record<string, Object> = { 'code': 'Canceled', 'message': 'Customer sheet has been canceled' };
           this.onFinished({ 'error': canceled });
+          this.closeDialog();
         })
     }
     .width('100%')

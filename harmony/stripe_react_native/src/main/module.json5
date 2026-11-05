@@ -7,6 +7,15 @@
       "tablet",
       "2in1"
     ],
+    // ArkTS linter 固定为兼容模式（arkts-* 规则降级为警告）：generated/ 代码与
+    // 历史 components 代码含 any/隐式类型，标准模式会直接编译失败；已交付 har
+    // 同样按兼容模式构建。开关为 ets-loader 读取的模块级 metadata（官方约定）。
+    "metadata": [
+      {
+        "name": "Api11ArkTSCheckMode",
+        "value": "DoArkTSCheckInCompatibleModeInApi11"
+      }
+    ],
     "requestPermissions": [
       {
         "name": "ohos.permission.INTERNET"

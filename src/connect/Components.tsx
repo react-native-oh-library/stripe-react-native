@@ -148,7 +148,8 @@ export function ConnectAccountOnboarding({
   // 可见期间注册 BackHandler，让返回键与导航栏关闭按钮走同一条 onExitCallback 路径；
   // Android 保持上游行为（Modal 原生处理返回）。
   useEffect(() => {
-    if (Platform.OS !== 'harmony' || !visible) {
+    // as string：兼容社区 RN 类型（PlatformOSType 不含 'harmony'），运行时行为不变
+    if ((Platform.OS as string) !== 'harmony' || !visible) {
       return;
     }
     const subscription = BackHandler.addEventListener(

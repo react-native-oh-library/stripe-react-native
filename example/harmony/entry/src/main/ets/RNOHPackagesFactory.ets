@@ -3,12 +3,12 @@
  * DO NOT modify it manually, your changes WILL be overwritten.
  */
 import type { RNPackageContext, RNOHPackage } from '@rnoh/react-native-openharmony';
-import StripeReactNativePackage from '@oh-rn/stripe-react-native';
 import WebViewPackage from '@react-native-ohos/react-native-webview';
+import StripeReactNativePackage from '@react-native-ohos/stripe-react-native';
 
 export function createRNOHPackages(ctx: RNPackageContext): RNOHPackage[] {
   return [
-    new StripeReactNativePackage(ctx),
     new WebViewPackage(ctx),
+    new StripeReactNativePackage(ctx),
   ];
 }

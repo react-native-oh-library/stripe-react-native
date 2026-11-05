@@ -1,7 +1,14 @@
 {
-  "extends": "@tsconfig/react-native/tsconfig.json",
+  "extends": "@react-native/typescript-config/tsconfig.json",
   "compilerOptions": {
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "baseUrl": ".",
+    "paths": {
+      // 与 metro 的 RNOH alias 对齐：JS 侧 import 原库名，实际解析到鸿蒙化包
+      "@stripe/stripe-react-native": [
+        "node_modules/@react-native-ohos/stripe-react-native/src/index.tsx"
+      ]
+    }
   },
   "include": ["App.tsx"],
   "exclude": ["node_modules", "harmony"]

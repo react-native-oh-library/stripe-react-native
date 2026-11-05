@@ -38,7 +38,7 @@ const DEVELOPMENT_URL =
 const PRODUCTION_URL = 'https://connect-js.stripe.com';
 const BASE_URL = DEVELOPMENT_MODE ? DEVELOPMENT_URL : PRODUCTION_URL;
 
-const sdkVersion = pjson.version;
+const sdkVersion = pjson.version.replace(/[-+].*$/, '');
 
 // Android deep link polling configuration
 // These constants control the polling mechanism that prevents Expo Router from dismissing screens
@@ -46,7 +46,8 @@ const POLLING_INTERVAL_MS = 500; // How often to check for pending deep links
 const URL_DEDUPLICATION_TIMEOUT_MS = 1000; // How long to remember handled URLs
 const DEEP_LINK_GRACE_PERIOD_MS = 500; // Time to wait for deep link after app resumes
 
-// react-native-webview.html will only load versions in the format X.Y.Z
+// react-native-webview.html will only load versions in the format X.Y.Z。
+// 在第 41 行统一剥离后再校验，否则 Connect 模块 require 即抛错、整棵 RN 树被拆（白屏）
 if (!/^\d+\.\d+\.\d+$/.test(sdkVersion)) {
   throw new Error(
     `Invalid SDK version: ${sdkVersion}. Must be in format X.Y.Z`
@@ -861,7 +862,8 @@ export function EmbeddedComponent(props: EmbeddedComponentProps) {
   // 这里用 OHOS 端受支持的文档起始注入（injectedJavaScriptBeforeContentLoaded）
   // 垫片补齐；其余平台保留上游 Android 的时序 workaround（空脚本）。
   const bootstrapScript =
-    Platform.OS === 'harmony'
+    // as string：兼容社区 RN 类型（PlatformOSType 不含 'harmony'），运行时行为不变
+    (Platform.OS as string) === 'harmony'
       ? buildOhosInjectedObjectShim(injectedObject)
       : '(function() {})();';
 

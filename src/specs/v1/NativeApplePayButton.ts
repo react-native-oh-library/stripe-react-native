@@ -6,7 +6,7 @@ import type {
 } from 'react-native/Libraries/Types/CodegenTypes';
 import codegenNativeComponent from 'react-native/Libraries/Utilities/codegenNativeComponent';
 import { ShippingContact, ShippingMethod } from '../../types/PlatformPay';
-import { UnsafeMixed } from '../utils';
+import { UnsafeMixed } from './utils';
 
 type OnShippingMethodSelectedActionEvent = {
   shippingMethod: UnsafeMixed<ShippingMethod>;

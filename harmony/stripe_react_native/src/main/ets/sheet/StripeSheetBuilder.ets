@@ -1,4 +1,27 @@
 /**
+ * MIT License
+ *
+ * Copyright (C) 2026 Huawei Device Co., Ltd.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+/**
  * StripeSheetBuilder — ComponentContent 用的 WrappedBuilder 入口。
  * 依据 StripeSheetParams.kind 分发到对应 ArkTS 组件。
  * StripeContainer 视图与页面组装遵循「叶子组件 + Stack 容器」约束。
@@ -19,12 +42,14 @@ function stripeSheetView(params: StripeSheetParams) {
         config: params.paymentConfig,
         flowHandler: (params as PaymentSheetParamsExt).paymentFlow,
         onFinished: (params as PaymentSheetParamsExt).onPaymentFinished,
+        closeDialog: (params as PaymentSheetParamsExt).closeDialog,
       })
     } else if (params.kind === StripeSheetKind.CUSTOMER_SHEET && params.customerConfig !== null) {
       CustomerSheetPage({
         config: params.customerConfig,
         flowHandler: (params as PaymentSheetParamsExt).customerFlow,
         onFinished: (params as PaymentSheetParamsExt).onCustomerFinished,
+        closeDialog: (params as PaymentSheetParamsExt).closeDialog,
       })
     }
   }
@@ -41,6 +66,9 @@ export class PaymentSheetParamsExt extends StripeSheetParams {
   };
   customerFlow: CustomerSheetFlowHandler | null = null;
   onCustomerFinished: (result: Record<string, Object>) => void = (result: Record<string, Object>) => {
+  };
+  /** 弹窗内容自关闭通道（Presenter 注入 controller.close()，2026-11-04 卡屏修复） */
+  closeDialog: () => void = () => {
   };
 }
 

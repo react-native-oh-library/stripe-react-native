@@ -1,7 +1,7 @@
 {
-  "name": "@oh-rn/stripe-react-native",
+  "name": "@react-native-ohos/stripe-react-native",
   "displayName": "Stripe React Native",
-  "version": "0.77.0",
+  "version": "0.76.1-beta.1",
   "description": "Stripe SDK for React Native",
   "main": "./src/index.tsx",
   "module": "./src/index.tsx",
@@ -23,6 +23,7 @@
     "src/",
     "harmony/",
     "README.md",
+	"CHANGELOG.md",
     "LICENSE"
   ],
   "scripts": {
@@ -57,7 +58,7 @@
     "alias": "@stripe/stripe-react-native",
     "autolinking": {
       "cmakeLibraryTargetName": "stripe_react_native",
-      "ohPackageName": "@oh-rn/stripe-react-native",
+      "ohPackageName": "@react-native-ohos/stripe-react-native",
       "etsPackageClassName": "StripeReactNativePackage",
       "cppPackageClassName": "StripeReactNativePackage"
     },

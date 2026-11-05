@@ -5,12 +5,12 @@
 // clang-format off
 #pragma once
 #include "RNOH/Package.h"
-#include "StripeReactNativePackage.h"
 #include "WebViewPackage.h"
+#include "StripeReactNativePackage.h"
 
 std::vector<rnoh::Package::Shared> createRNOHPackages(const rnoh::Package::Context &ctx) {
   return {
-    std::make_shared<rnoh::StripeReactNativePackage>(ctx),
     std::make_shared<rnoh::WebViewPackage>(ctx),
+    std::make_shared<rnoh::StripeReactNativePackage>(ctx),
   };
 }

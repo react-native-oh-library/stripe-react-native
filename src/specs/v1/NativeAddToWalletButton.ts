@@ -9,7 +9,7 @@ import type {
   GooglePayCardToken,
   StripeError,
 } from '../../types';
-import type { UnsafeMixed, ImageSource } from '../utils';
+import type { UnsafeMixed, ImageSource } from './utils';
 
 type AddToWalletButtonCompleteEvent = Readonly<{
   error: UnsafeMixed<StripeError<CardActionError>> | null;

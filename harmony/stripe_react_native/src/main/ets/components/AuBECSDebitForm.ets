@@ -1,4 +1,27 @@
 /**
+ * MIT License
+ *
+ * Copyright (C) 2026 Huawei Device Co., Ltd.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+/**
  * AuBECSDebitForm — 澳大利亚 BECS 借记表单（BSB/账号/姓名/邮箱，P2）。
  *
  * 对齐 STPAUBECSFormView 交互：四项填写完整后发射 'completeAction'，
@@ -22,6 +45,10 @@ export struct AuBECSDebitForm {
   @State private textColorValue: string = '#1A1A1A';
   @State private backgroundColorValue: string = '#F6F8FA';
   @State private textSizeValue: number = 15;
+  @State private borderWidthValue: number = 0;
+  @State private borderColorValue: string = '#33000000';
+  @State private borderRadiusValue: number = 8;
+  @State private placeholderColorValue: string = '#99000000';
 
   private eventEmitter: Spec.EventEmitter | undefined = undefined;
   private cleanUpCallbacks: (() => void)[] = [];
@@ -49,6 +76,22 @@ export struct AuBECSDebitForm {
               const fs = style['fontSize'];
               if (typeof fs === 'number') {
                 this.textSizeValue = fs;
+              }
+              const bw = style['borderWidth'];
+              if (typeof bw === 'number') {
+                this.borderWidthValue = bw;
+              }
+              const bc = style['borderColor'];
+              if (typeof bc === 'string') {
+                this.borderColorValue = bc;
+              }
+              const br = style['borderRadius'];
+              if (typeof br === 'number') {
+                this.borderRadiusValue = br;
+              }
+              const pc = style['placeholderColor'];
+              if (typeof pc === 'string') {
+                this.placeholderColorValue = pc;
               }
             }
           }
@@ -99,7 +142,12 @@ export struct AuBECSDebitForm {
           .height(42)
           .width('100%')
           .padding({ left: 12, right: 12 })
-          .borderRadius(8)
+          .placeholderColor(this.placeholderColorValue)
+          .border({
+            width: this.borderWidthValue,
+            color: this.borderColorValue,
+            radius: this.borderRadiusValue,
+          })
           .backgroundColor(this.backgroundColorValue)
           .margin({ bottom: 8 })
           .onChange((value: string) => {
@@ -113,7 +161,12 @@ export struct AuBECSDebitForm {
           .height(42)
           .width('100%')
           .padding({ left: 12, right: 12 })
-          .borderRadius(8)
+          .placeholderColor(this.placeholderColorValue)
+          .border({
+            width: this.borderWidthValue,
+            color: this.borderColorValue,
+            radius: this.borderRadiusValue,
+          })
           .backgroundColor(this.backgroundColorValue)
           .margin({ bottom: 8 })
           .onChange((value: string) => {
@@ -129,7 +182,12 @@ export struct AuBECSDebitForm {
           .height(42)
           .width('100%')
           .padding({ left: 12, right: 12 })
-          .borderRadius(8)
+          .placeholderColor(this.placeholderColorValue)
+          .border({
+            width: this.borderWidthValue,
+            color: this.borderColorValue,
+            radius: this.borderRadiusValue,
+          })
           .backgroundColor(this.backgroundColorValue)
           .margin({ bottom: 8 })
           .onChange((value: string) => {
@@ -145,7 +203,12 @@ export struct AuBECSDebitForm {
           .height(42)
           .width('100%')
           .padding({ left: 12, right: 12 })
-          .borderRadius(8)
+          .placeholderColor(this.placeholderColorValue)
+          .border({
+            width: this.borderWidthValue,
+            color: this.borderColorValue,
+            radius: this.borderRadiusValue,
+          })
           .backgroundColor(this.backgroundColorValue)
           .onChange((value: string) => {
             this.accountNumberInput = value;
