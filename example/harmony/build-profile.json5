@@ -37,6 +37,18 @@
           ]
         }
       ]
+    },
+    {
+      "name": "stripe_react_native",
+      "srcPath": "../../harmony/stripe_react_native",
+      "targets": [
+        {
+          "name": "default",
+          "applyToProducts": [
+            "default"
+          ]
+        }
+      ]
     }
   ]
 }
