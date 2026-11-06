@@ -7,7 +7,8 @@
     "start": "react-native start",
     "test": "jest",
     "dev": "react-native bundle-harmony --dev false",
-    "tsc": "tsc --noEmit"
+    "tsc": "tsc --noEmit",
+    "fast:pkg": "cd ../ && npm pack && cd ./example && npm i --legacy-peer-deps && npm run dev"
   },
   "dependencies": {
     "@react-native-oh/react-native-harmony": "0.84.5",

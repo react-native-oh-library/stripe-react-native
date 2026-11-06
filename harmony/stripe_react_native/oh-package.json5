@@ -1,13 +1,13 @@
 {
-  "license": "Apache-2.0",
+  "license": "MIT",
   "devDependencies": {
 
   },
   "author": "",
   "name": "@react-native-ohos/stripe-react-native",
-  "description": "Please describe the basic information.",
+  "description": "Stripe SDK for React Native (OpenHarmony)",
   "main": "index.ets",
-  "version": "1.0.0",
+  "version": "0.76.1-beta.1",
   "dependencies": {
     "@rnoh/react-native-openharmony": "file:../react_native_openharmony_release.har"
   }

@@ -7,7 +7,8 @@
     "start": "react-native start",
     "test": "jest",
     "dev": "react-native bundle-harmony --dev false",
-    "tsc": "tsc --noEmit"
+    "tsc": "tsc --noEmit",
+    "fast:pkg": "cd ../ && npm pack && cd ./example && npm i --legacy-peer-deps && npm run dev"
   },
   "dependencies": {
     "@react-native-oh/react-native-harmony": "0.72.139",
@@ -20,8 +21,10 @@
     "@babel/core": "^7.20.0",
     "@babel/preset-env": "^7.20.0",
     "@babel/runtime": "^7.20.0",
+    "@react-native-community/cli": "11.3.6",
     "@react-native/eslint-config": "^0.72.2",
     "@react-native/metro-config": "^0.72.11",
+    "@react-native-oh/react-native-harmony-cli": "^0.72.140",
     "@tsconfig/react-native": "^3.0.0",
     "@types/react": "^18.0.24",
     "@types/react-test-renderer": "^18.0.0",

@@ -9,13 +9,13 @@
   "react-native": "./src/index.tsx",
   "license": "MIT",
   "private": false,
-  "repository": "https://github.com/stripe/stripe-react-native",
+  "repository": "https://github.com/react-native-oh-library/stripe-react-native",
   "keywords": [
     "react-native",
     "harmony",
     "harmonyos"
   ],
-  "homepage": "https://github.com/stripe/stripe-react-native/#readme",
+  "homepage": "https://github.com/react-native-oh-library/stripe-react-native#readme",
   "publishConfig": {
     "registry": "https://registry.npmjs.org/"
   },

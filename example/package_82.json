@@ -7,38 +7,41 @@
     "start": "react-native start",
     "test": "jest",
     "dev": "react-native bundle-harmony --dev false",
-    "tsc": "tsc --noEmit"
+    "tsc": "tsc --noEmit",
+    "fast:pkg": "cd ../ && npm pack && cd ./example && npm i --legacy-peer-deps && npm run dev"
   },
   "dependencies": {
-    "@react-native-oh/react-native-harmony": "0.72.139",
-    "@react-native-ohos/react-native-webview": "~13.10.5",
+    "@react-native-oh/react-native-harmony": "0.82.35",
+    "@react-native-ohos/react-native-webview": "~13.16.1",
     "@react-native-ohos/stripe-react-native": "file:../react-native-ohos-stripe-react-native-0.76.1-beta.1.tgz",
-    "react": "18.2.0",
-    "react-native": "0.72.5"
+    "react": "19.1.1",
+    "react-native": "0.82.1"
   },
   "devDependencies": {
-    "@babel/core": "^7.20.0",
-    "@babel/preset-env": "^7.20.0",
-    "@babel/runtime": "^7.20.0",
-    "@react-native/eslint-config": "^0.72.2",
-    "@react-native/metro-config": "^0.72.11",
-    "@tsconfig/react-native": "^3.0.0",
-    "@types/react": "^18.0.24",
-    "@types/react-test-renderer": "^18.0.0",
-    "babel-jest": "^29.2.1",
+    "@babel/core": "^7.25.2",
+    "@babel/preset-env": "^7.25.3",
+    "@babel/runtime": "^7.25.0",
+    "@react-native-community/cli": "20.2.0",
+    "@react-native/babel-preset": "0.82.1",
+    "@react-native/eslint-config": "0.82.1",
+    "@react-native/metro-config": "0.82.1",
+    "@react-native/typescript-config": "0.82.1",
+    "@react-native-oh/react-native-harmony-cli": "^0.82.7",
+    "@types/react": "^19.1.1",
+    "@types/react-test-renderer": "^19.0.0",
+    "babel-jest": "^29.6.3",
     "eslint": "^8.19.0",
-    "jest": "^29.2.1",
-    "metro-react-native-babel-preset": "0.76.8",
-    "prettier": "^2.4.1",
-    "react-test-renderer": "18.2.0",
-    "typescript": "^5.0.0"
+    "jest": "^29.6.3",
+    "prettier": "3.2.4",
+    "react-test-renderer": "19.1.1",
+    "typescript": "^5.3.2"
   },
   "overrides": {
-    "@react-native-community/cli": "11.3.6",
-    "@react-native/codegen": "0.74.0"
+    "@react-native-community/cli": "20.2.0",
+    "@react-native/codegen": "0.82.1"
   },
   "resolutions": {
-    "@react-native-community/cli": "11.3.6"
+    "@react-native-community/cli": "20.2.0"
   },
   "engines": {
     "node": ">=20"

@@ -614,6 +614,7 @@ ConnectPayments extra prop: defaultFilters (PaymentsListDefaultFilters, effectiv
 | useOnramp | hook | wraps all OnrampSdk methods (configure / hasLinkAccount / verifyIdentity / performCheckout, etc.) | iOS, Android | No | Crypto Onramp hook (degraded, isSamsungPaySupported→false) |
 | useLinkController | hook | init / present / confirm + loading | iOS, Android | No | Link hook (Private Preview, degraded) |
 | useCheckout | hook | Checkout Session state and controller methods (reload / confirm, etc.) | All | No | Checkout hook (Private Preview, returns structured error) |
+| useEmbeddedPaymentElement | hook | embedded payment element (updateIntent / confirm / clearPaymentOption + state) | All | No | Embedded payment element hook (exported on the JS side; the underlying createEmbeddedPaymentElement etc. native methods degrade to notSupported, and the native view is an empty placeholder) |
 
 ### Unimplemented Features
 | API / Property | Reason |
