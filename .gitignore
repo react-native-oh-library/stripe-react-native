@@ -26,7 +26,6 @@ example/harmony/.hvigor/
 example/harmony/.cxx/
 .cxx/
 .ohpm/
-harmony/*.har
 
 # rn.py build hap fingerprints / local build metadata
 .rn-build/
