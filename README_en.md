@@ -708,7 +708,7 @@ Then open the `example/harmony` directory in DevEco Studio, wait for Sync to fin
 
 ## How to Contribute
 
-If you run into any problems while using stripe-react-native, feel free to submit an [Issue](https://github.com/stripe/stripe-react-native/issues). Pull requests are also very welcome.
+If you run into any problems while using stripe-react-native, feel free to submit an [Issue](https://github.com/react-native-oh-library/stripe-react-native/issues). Pull requests are also very welcome.
 
 ## License
 

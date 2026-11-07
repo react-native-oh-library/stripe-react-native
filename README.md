@@ -760,7 +760,7 @@ cd example/harmony && ohpm install --all
 
 ## 贡献代码
 
-使用过程中发现任何问题都可以提交 [Issue](https://github.com/stripe/stripe-react-native/issues)，当然，也非常欢迎提交 PR。
+使用过程中发现任何问题都可以提交 [Issue](https://github.com/react-native-oh-library/stripe-react-native/issues)，当然，也非常欢迎提交 PR。
 
 ## 开源协议
 
