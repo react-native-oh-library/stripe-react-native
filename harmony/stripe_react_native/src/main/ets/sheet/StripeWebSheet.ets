@@ -58,7 +58,11 @@ export struct StripeWebSheet {
   }
 
   aboutToDisappear(): void {
-    // noop：controller 随组件销毁解绑
+    // 兜底：系统返回键/窗口销毁不会触发「‹」按钮的取消通道，
+    // 若组件销毁时认证仍未结束（isFinished=false），补发取消回调，
+    // 避免上层 runWebAuth / presentExternalWebPage 的 Promise 永远 pending。
+    // 正常关闭路径（回跳/「‹」取消）此处 isFinished 已为 true，no-op。
+    this.handleCancel();
   }
 
   private handleIntercepted(returnUrl: string): void {

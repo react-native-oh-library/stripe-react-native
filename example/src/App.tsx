@@ -11,6 +11,9 @@
  * - PaymentSheetTypesDemo       P2：PaymentSheet 外观树 / IntentConfiguration / CustomPaymentMethod / 组件类型
  * - ResultTypesDemo             P2：Result 联合类型 / Errors / InitStripe / PushProvisioning
  * - NamespaceTypesDemo          P2：PaymentIntent/PaymentMethod/Token/PlatformPay/FinancialConnections/ConfirmationToken/LinkController 等命名空间
+ * - StripeSdkMethodsDemo        P2：StripeSdk TurboModule 45 个方法直达（占位参数，观察鸿蒙降级返回）
+ * - TypesGapDemo                P2：覆盖度缺口类型补样（150 个接口全字段字面量 + 33 个枚举成员引用）
+ * - TypesGap2Demo               P2：覆盖度缺口第二批补样（SetupParamsBase/Checkout/AppearanceVariables 等精确注解全字段）
  */
 
 import React, {useEffect, useState} from 'react';
@@ -25,6 +28,9 @@ import {CheckoutDemo} from './CheckoutDemo';
 import {PaymentSheetTypesDemo} from './PaymentSheetTypesDemo';
 import {ResultTypesDemo} from './ResultTypesDemo';
 import {NamespaceTypesDemo} from './NamespaceTypesDemo';
+import {StripeSdkMethodsDemo} from './StripeSdkMethodsDemo';
+import {TypesGapDemo} from './TypesGapDemo';
+import {TypesGap2Demo} from './TypesGap2Demo';
 
 type ScreenName =
   | 'home'
@@ -35,7 +41,10 @@ type ScreenName =
   | 'checkout'
   | 'paymentSheetTypes'
   | 'resultTypes'
-  | 'namespaceTypes';
+  | 'namespaceTypes'
+  | 'stripeSdkMethods'
+  | 'typesGap'
+  | 'typesGap2';
 
 const DEMOS: Array<{
   name: Exclude<ScreenName, 'home'>;
@@ -83,6 +92,21 @@ const DEMOS: Array<{
     title: 'NamespaceTypesDemo',
     description: '',
   },
+  {
+    name: 'stripeSdkMethods',
+    title: 'StripeSdkMethodsDemo',
+    description: '',
+  },
+  {
+    name: 'typesGap',
+    title: 'TypesGapDemo',
+    description: '',
+  },
+  {
+    name: 'typesGap2',
+    title: 'TypesGap2Demo',
+    description: '',
+  },
 ];
 
 const App = () => {
@@ -124,6 +148,12 @@ const App = () => {
         return <ResultTypesDemo />;
       case 'namespaceTypes':
         return <NamespaceTypesDemo />;
+      case 'stripeSdkMethods':
+        return <StripeSdkMethodsDemo />;
+      case 'typesGap':
+        return <TypesGapDemo />;
+      case 'typesGap2':
+        return <TypesGap2Demo />;
       default:
         return renderHome();
     }
